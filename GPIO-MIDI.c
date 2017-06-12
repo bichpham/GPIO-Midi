@@ -5,7 +5,7 @@ To send some events at a specific time:
 	-create your own (source) port;
 	-construct and send some events.
 	* 
-	* compile: gcc -o playMidi playMidi.c -lasound
+	* compile: gcc -o GPIO-MIDI GPIO-MIDI.c -lasound
 
 
 This program is free software: you can redistribute it and/or modify
@@ -59,7 +59,7 @@ To create a port, allocate a port info object with snd_seq_port_info_alloca,
     int port;
     port = snd_seq_create_simple_port(seq, "GPIO Virtual Midi Port",
             SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ | SND_SEQ_PORT_CAP_WRITE,
-            SND_SEQ_PORT_TYPE_APPLICATION);
+            SND_SEQ_PORT_TYPE_HARDWARE);
             
      snd_seq_event_t ev;
     snd_seq_ev_clear(&ev);
