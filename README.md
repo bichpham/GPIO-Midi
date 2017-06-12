@@ -1,2 +1,2 @@
 # GPIO-Midi
-# GPIO-Midi
+This is first c project on git to. Just testing.
