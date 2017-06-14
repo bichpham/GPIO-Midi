@@ -1,5 +1,5 @@
 all:
-	@gcc -o GPIO-MIDI GPIO-MIDI.c -lasound
+	@gcc -Wall -pthread -o GPIO-MIDI GPIO-MIDI.c -lasound -lpigpio -lrt
 
 clean:
 	@rm GPIO-MIDI

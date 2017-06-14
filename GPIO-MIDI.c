@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory.h>
 #include <alsa/asoundlib.h>
 #include <alsa/seq.h>
+#include <pigpio.h>
 
 #define MAX_SENDERS 16
 
@@ -36,6 +37,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 int main()
 {
+	
+
        
 
 /*
@@ -59,7 +62,7 @@ To create a port, allocate a port info object with snd_seq_port_info_alloca,
     int port;
     port = snd_seq_create_simple_port(seq, "GPIO MIDI VIRTUAL Port",
             SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ | SND_SEQ_PORT_CAP_WRITE,
-            SND_SEQ_PORT_TYPE_APPLICATION);
+            SND_SEQ_PORT_TYPE_HARDWARE);
             
      snd_seq_event_t ev;
     snd_seq_ev_clear(&ev);
@@ -88,13 +91,21 @@ To send an event, allocate an event structure (just for a change, you can use a
 
     //snd_seq_drain_output(seq);   
     
+   if (gpioInitialise() < 0)
+   {
+      fprintf(stderr, "pigpio initialisation failed\n");
+      return 1;
+   }
+   gpioSetMode(17, PI_INPUT);  // Set GPIO17 as input.
+   gpioSetPullUpDown(17, PI_PUD_DOWN); // Sets a pull-down. 
+   int testpin;
+    
     while (true)
     { 
-		sleep(5);
+		/*sleep(5);
 		snd_seq_ev_set_noteon(&ev, 0, 60, 127);
 		snd_seq_event_output(seq, &ev);
 		
-		//sleep(5);
 
 		snd_seq_drain_output(seq);
 		
@@ -102,7 +113,26 @@ To send an event, allocate an event structure (just for a change, you can use a
 		snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
 		snd_seq_event_output(seq, &ev);
 		
-		snd_seq_drain_output(seq);
+		snd_seq_drain_output(seq);*/
+		
+		if (gpioRead(17)==1)
+		{
+			snd_seq_ev_set_noteon(&ev, 0, 60, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+		}
+		if (gpioRead(17) ==0)
+		{
+			snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
+			snd_seq_event_output(seq, &ev);
+		
+			snd_seq_drain_output(seq);
+		}
+		
+		//sleep(2);
+		//testpin = gpioRead(17);
+		//printf("GPIO17 is level %d \n", gpioRead(17));
+		
 	}     
     
             
