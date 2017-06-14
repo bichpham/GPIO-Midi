@@ -99,6 +99,7 @@ To send an event, allocate an event structure (just for a change, you can use a
    gpioSetMode(17, PI_INPUT);  // Set GPIO17 as input.
    gpioSetPullUpDown(17, PI_PUD_DOWN); // Sets a pull-down. 
    int testpin;
+   bool Prev_Read_17;
     
     while (true)
     { 
@@ -115,21 +116,28 @@ To send an event, allocate an event structure (just for a change, you can use a
 		
 		snd_seq_drain_output(seq);*/
 		
-		if (gpioRead(17)==1)
-		{
-			snd_seq_ev_set_noteon(&ev, 0, 60, 127);
-			snd_seq_event_output(seq, &ev);
-			snd_seq_drain_output(seq);
-		}
-		if (gpioRead(17) ==0)
-		{
-			snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
-			snd_seq_event_output(seq, &ev);
 		
-			snd_seq_drain_output(seq);
+		if(Prev_Read_17 != gpioRead(17))
+		{
+		
+			if (gpioRead(17)==1)
+			{
+				snd_seq_ev_set_noteon(&ev, 0, 60, 127);
+				snd_seq_event_output(seq, &ev);
+				snd_seq_drain_output(seq);
+			}
+			if (gpioRead(17) ==0)
+			{
+				snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
+				snd_seq_event_output(seq, &ev);
+			
+				snd_seq_drain_output(seq);
+			}
 		}
 		
-		//sleep(2);
+		bool Prev_Read_17 = gpioRead(17);
+		
+		//sleep(1);
 		//testpin = gpioRead(17);
 		//printf("GPIO17 is level %d \n", gpioRead(17));
 		
