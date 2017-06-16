@@ -31,7 +31,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <alsa/seq.h>
 #include <pigpio.h>
 
-#define MAX_SENDERS 16
+snd_seq_t *seq;		// variable seq is a pointer to sdn-seq_t type
+
+snd_seq_event_t ev;
+
+//#define MAX_SENDERS 16
+
+void aFunction(int gpio, int level, uint32_t tick)
+{
+   printf("GPIO %d became %d at %d \n", gpio, level, tick);
+   
+   if (level)
+   {
+		snd_seq_ev_set_noteon(&ev, 0, 60, 127);
+		snd_seq_event_output(seq, &ev);
+		snd_seq_drain_output(seq);
+		printf("Note on \n");
+	}
+	else {
+		//snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
+		//snd_seq_event_output(seq, &ev);
+		//snd_seq_drain_output(seq);
+		printf("Note off \n");
+	}
+}
 
 
 
@@ -47,7 +70,7 @@ To open the sequencer, call snd_seq_open. (You can get your client
 
 */
 
-    snd_seq_t *seq;
+    //snd_seq_t *seq;		// variable seq is a pointer to sdn-seq_t type
     snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0);
     snd_seq_set_client_name(seq, "GPIO MIDI Client");
     
@@ -64,7 +87,7 @@ To create a port, allocate a port info object with snd_seq_port_info_alloca,
             SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ | SND_SEQ_PORT_CAP_WRITE,
             SND_SEQ_PORT_TYPE_HARDWARE);
             
-     snd_seq_event_t ev;
+     //snd_seq_event_t ev;
     snd_seq_ev_clear(&ev);
     snd_seq_ev_set_direct(&ev);
     
@@ -98,8 +121,8 @@ To send an event, allocate an event structure (just for a change, you can use a
    }
    gpioSetMode(17, PI_INPUT);  // Set GPIO17 as input.
    gpioSetPullUpDown(17, PI_PUD_DOWN); // Sets a pull-down. 
-   int testpin;
    bool Prev_Read_17;
+   gpioGlitchFilter(17,5000); //set 5ms debounce for gpioSetAlertFunc
     
     while (true)
     { 
@@ -116,33 +139,51 @@ To send an event, allocate an event structure (just for a change, you can use a
 		
 		snd_seq_drain_output(seq);*/
 		
-		
+		//int pi = callback(17, RISING_EDGE, f);
+		/*
 		if(Prev_Read_17 != gpioRead(17))
 		{
 		
-			if (gpioRead(17)==1)
+			if (gpioRead(17) & !Prev_Read_17)
 			{
-				snd_seq_ev_set_noteon(&ev, 0, 60, 127);
-				snd_seq_event_output(seq, &ev);
-				snd_seq_drain_output(seq);
+				//snd_seq_ev_set_noteon(&ev, 0, 60, 127);
+				//snd_seq_event_output(seq, &ev);
+				//snd_seq_drain_output(seq);
+				printf("GPIO17 is level %d \n", gpioRead(17));
+				
 			}
-			if (gpioRead(17) ==0)
+			if (!gpioRead(17) & Prev_Read_17)
 			{
-				snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
-				snd_seq_event_output(seq, &ev);
+				//snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
+				//snd_seq_event_output(seq, &ev);
 			
-				snd_seq_drain_output(seq);
+				//snd_seq_drain_output(seq);
+				printf("GPIO17 is level %d \n", gpioRead(17));
 			}
+			//printf("GPIO17 is level %d \n", gpioRead(17));
 		}
 		
-		bool Prev_Read_17 = gpioRead(17);
+		Prev_Read_17 = gpioRead(17);
+		//delay(20);
+		sleep(.1);
+
+		//printf("GPIO17 is level %d \n", gpioRead(17));
+		*/
+		
+		// call aFunction whenever GPIO 4 changes state
+		//gpioDelay(10000000);
+		//gpioSleep(PI_TIME_RELATIVE, 2, 100000); // sleep for 0.1 seconds
 		
 		//sleep(1);
-		//testpin = gpioRead(17);
-		//printf("GPIO17 is level %d \n", gpioRead(17));
+		gpioSetAlertFunc(17, aFunction);
+		
+
+		
+		//printf("GPIO17 is level %d \n", gpioGlitchFilter(17,30000));
 		
 	}     
     
             
  return 0;
 }
+
