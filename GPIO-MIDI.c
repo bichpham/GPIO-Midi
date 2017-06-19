@@ -35,25 +35,64 @@ snd_seq_t *seq;		// variable seq is a pointer to sdn-seq_t type
 
 snd_seq_event_t ev;
 
+int midi_channel;
+
 //#define MAX_SENDERS 16
 
 void aFunction(int gpio, int level, uint32_t tick)
 {
    printf("GPIO %d became %d at %d \n", gpio, level, tick);
    
-   if (level)
+   if (gpio ==17)
    {
-		snd_seq_ev_set_noteon(&ev, 0, 60, 127);
-		snd_seq_event_output(seq, &ev);
-		snd_seq_drain_output(seq);
-		printf("Note on \n");
+	   if (level)
+	   {
+			snd_seq_ev_set_noteon(&ev, midi_channel, 60, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note c on \n");
+		}
+		else {
+			snd_seq_ev_set_noteoff(&ev, midi_channel, 60, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note c off \n");
+		}
 	}
-	else {
-		//snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
-		//snd_seq_event_output(seq, &ev);
-		//snd_seq_drain_output(seq);
-		printf("Note off \n");
+	   
+	if (gpio ==27)
+   {
+	   if (level)
+	   {
+			snd_seq_ev_set_noteon(&ev, midi_channel, 64, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note e on \n");
+		}
+		else {
+			snd_seq_ev_set_noteoff(&ev, midi_channel, 64, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note e off \n");
+		}
 	}
+	
+	if (gpio ==22)
+   {
+	   if (level)
+	   {
+			snd_seq_ev_set_noteon(&ev, midi_channel, 67, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note g on \n");
+		}
+		else {
+			snd_seq_ev_set_noteoff(&ev, midi_channel, 67, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note g off \n");
+		}
+	}		
 }
 
 
@@ -61,7 +100,7 @@ void aFunction(int gpio, int level, uint32_t tick)
 int main()
 {
 	
-
+midi_channel=0;					//set initial midi channel to be 0
        
 
 /*
@@ -82,8 +121,8 @@ To create a port, allocate a port info object with snd_seq_port_info_alloca,
 */
     
     
-    int port;
-    port = snd_seq_create_simple_port(seq, "GPIO MIDI VIRTUAL Port",
+    //int port;
+    int port = snd_seq_create_simple_port(seq, "GPIO MIDI VIRTUAL Port",
             SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ | SND_SEQ_PORT_CAP_WRITE,
             SND_SEQ_PORT_TYPE_HARDWARE);
             
@@ -105,14 +144,7 @@ To send an event, allocate an event structure (just for a change, you can use a
     //snd_seq_ev_set_dest(&ev, 129, 0); /* send to 64:0 */
     /* or */
     snd_seq_ev_set_subs(&ev);        /* send to subscribers of source port */
-
-    //snd_seq_ev_set_noteon(&ev, 0, 60, 127);
-    //snd_seq_event_output(seq, &ev);
-
-    //snd_seq_ev_set_noteon(&ev, 0, 67, 127);
-    //snd_seq_event_output(seq, &ev);
-
-    //snd_seq_drain_output(seq);   
+ 
     
    if (gpioInitialise() < 0)
    {
@@ -120,66 +152,25 @@ To send an event, allocate an event structure (just for a change, you can use a
       return 1;
    }
    gpioSetMode(17, PI_INPUT);  // Set GPIO17 as input.
-   gpioSetPullUpDown(17, PI_PUD_DOWN); // Sets a pull-down. 
-   bool Prev_Read_17;
+   gpioSetPullUpDown(17, PI_PUD_DOWN); // Sets as pull-down. 
    gpioGlitchFilter(17,5000); //set 5ms debounce for gpioSetAlertFunc
+   
+   gpioSetMode(27, PI_INPUT);  // Set GPIO27 as input.
+   gpioSetPullUpDown(27, PI_PUD_DOWN); // Sets as pull-down. 
+   gpioGlitchFilter(27,5000); //set 5ms debounce for gpioSetAlertFunc
+   
+   gpioSetMode(22, PI_INPUT);  // Set GPIO22 as input.
+   gpioSetPullUpDown(22, PI_PUD_DOWN); // Sets as pull-down. 
+   gpioGlitchFilter(22,5000); //set 5ms debounce for gpioSetAlertFunc
     
     while (true)
     { 
-		/*sleep(5);
-		snd_seq_ev_set_noteon(&ev, 0, 60, 127);
-		snd_seq_event_output(seq, &ev);
-		
 
-		snd_seq_drain_output(seq);
-		
-		sleep(5);
-		snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
-		snd_seq_event_output(seq, &ev);
-		
-		snd_seq_drain_output(seq);*/
-		
-		//int pi = callback(17, RISING_EDGE, f);
-		/*
-		if(Prev_Read_17 != gpioRead(17))
-		{
-		
-			if (gpioRead(17) & !Prev_Read_17)
-			{
-				//snd_seq_ev_set_noteon(&ev, 0, 60, 127);
-				//snd_seq_event_output(seq, &ev);
-				//snd_seq_drain_output(seq);
-				printf("GPIO17 is level %d \n", gpioRead(17));
-				
-			}
-			if (!gpioRead(17) & Prev_Read_17)
-			{
-				//snd_seq_ev_set_noteoff(&ev, 0, 60, 127);
-				//snd_seq_event_output(seq, &ev);
-			
-				//snd_seq_drain_output(seq);
-				printf("GPIO17 is level %d \n", gpioRead(17));
-			}
-			//printf("GPIO17 is level %d \n", gpioRead(17));
-		}
-		
-		Prev_Read_17 = gpioRead(17);
-		//delay(20);
-		sleep(.1);
+		gpioSetAlertFunc(17, aFunction);		//note c
+		gpioSetAlertFunc(27, aFunction);		//note e
+		gpioSetAlertFunc(22, aFunction);		//note g
 
-		//printf("GPIO17 is level %d \n", gpioRead(17));
-		*/
-		
-		// call aFunction whenever GPIO 4 changes state
-		//gpioDelay(10000000);
-		//gpioSleep(PI_TIME_RELATIVE, 2, 100000); // sleep for 0.1 seconds
-		
-		//sleep(1);
-		gpioSetAlertFunc(17, aFunction);
-		
-
-		
-		//printf("GPIO17 is level %d \n", gpioGlitchFilter(17,30000));
+	
 		
 	}     
     
