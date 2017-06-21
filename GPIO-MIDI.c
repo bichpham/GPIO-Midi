@@ -6,6 +6,8 @@ To send some events at a specific time:
 	-construct and send some events.
 	* 
 	* compile: gcc -o GPIO-MIDI GPIO-MIDI.c -lasound
+	* dedicated gpio (4, 17, 27, 22, 5, 6, 13, 19, 26,
+	* 				 	18, 23, 24, 25, 12, 16, 20, 21)	
 
 
 This program is free software: you can redistribute it and/or modify
@@ -37,13 +39,28 @@ snd_seq_event_t ev;
 
 int midi_channel;
 
-//#define MAX_SENDERS 16
-
-void aFunction(int gpio, int level, uint32_t tick)
+	//* dedicated gpio (4, 17, 27, 22, 5, 6, 13, 19, 26,
+	//* 				 	18, 23, 24, 25, 
+								//12, 16, 20, 21)	
+struct midinote 
 {
-   printf("GPIO %d became %d at %d \n", gpio, level, tick);
-   
-   if (gpio ==17)
+     int gpio;
+     int notenum;
+     int notevelocity;
+};
+
+struct midinote gpionote[17];
+
+void aFunction(int gpio, int level, uint32_t tick, void *currentnote)
+{
+	struct midinote my_currentnote = *(struct midinote*)currentnote;
+	//free(currentnote);
+	 printf("GPIO %d became %d at %d \n", gpio, level, tick);
+	 printf(" gpio is: %d \n", my_currentnote.gpio);
+	 printf(" notenum is: %d \n", my_currentnote.notenum);
+	 printf(" notevelocity is: %d\n\n", my_currentnote.notevelocity);
+   /*
+   if (gpio ==4)
    {
 	   if (level)
 	   {
@@ -60,7 +77,7 @@ void aFunction(int gpio, int level, uint32_t tick)
 		}
 	}
 	   
-	if (gpio ==27)
+	if (gpio ==17)
    {
 	   if (level)
 	   {
@@ -77,7 +94,7 @@ void aFunction(int gpio, int level, uint32_t tick)
 		}
 	}
 	
-	if (gpio ==22)
+	if (gpio ==27)
    {
 	   if (level)
 	   {
@@ -92,7 +109,26 @@ void aFunction(int gpio, int level, uint32_t tick)
 			snd_seq_drain_output(seq);
 			printf("Note g off \n");
 		}
-	}		
+	}	
+	
+		if (gpio ==5)
+   {
+	   
+	    if (level)
+	   {
+			snd_seq_ev_set_noteon(&ev, midi_channel, 72, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note c72 on \n");
+		}
+		else {
+			snd_seq_ev_set_noteoff(&ev, midi_channel, 72, 127);
+			snd_seq_event_output(seq, &ev);
+			snd_seq_drain_output(seq);
+			printf("Note 72 off \n");
+		}
+	}
+	*/		
 }
 
 
@@ -144,16 +180,58 @@ To send an event, allocate an event structure (just for a change, you can use a
     //snd_seq_ev_set_dest(&ev, 129, 0); /* send to 64:0 */
     /* or */
     snd_seq_ev_set_subs(&ev);        /* send to subscribers of source port */
- 
     
+    //specifying gpio to use for input switch
+    gpionote[0].gpio=4;
+	gpionote[1].gpio=17;
+	gpionote[2].gpio=27;
+	gpionote[3].gpio=22;
+	gpionote[4].gpio=5;
+	gpionote[5].gpio=6;
+	gpionote[6].gpio=13;
+	gpionote[7].gpio=19;
+	gpionote[8].gpio=26;
+	gpionote[9].gpio=18;
+	gpionote[10].gpio=23;
+	gpionote[11].gpio=24;
+	gpionote[12].gpio=25;
+	gpionote[13].gpio=12;
+	gpionote[14].gpio=16;
+	gpionote[15].gpio=20;
+	gpionote[16].gpio=21;
+    
+   int i;
    if (gpioInitialise() < 0)
    {
       fprintf(stderr, "pigpio initialisation failed\n");
       return 1;
    }
-   gpioSetMode(17, PI_INPUT);  // Set GPIO17 as input.
-   gpioSetPullUpDown(17, PI_PUD_DOWN); // Sets as pull-down. 
-   gpioGlitchFilter(17,5000); //set 5ms debounce for gpioSetAlertFunc
+   
+   //setting up gpio and populating midi note number,gpio, and velocity
+   
+   struct midinote *currentnote;
+   currentnote = malloc(sizeof(struct midinote));
+   
+   for(i=0; i<2; i++)
+	{
+		gpionote[i].notenum = 60+i;
+		gpionote[i].notevelocity = 127;
+		gpioSetMode(gpionote[i].gpio, PI_INPUT);	//Set as input.
+		gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);// Sets as pull-down. 
+		gpioGlitchFilter(gpionote[i].gpio,5000); //set 5ms debounce for gpioSetAlertFunc
+		*currentnote = gpionote[i];
+		gpioSetAlertFuncEx(gpionote[i].gpio, aFunction, currentnote);
+		//sleep(100);
+		 printf("     notes : %d \n", i);
+         printf(" gpio is: %d \n", gpionote[i].gpio);
+         printf(" notenum is: %d \n", gpionote[i].notenum);
+         printf(" notevelocity is: %d\n\n",gpionote[i].notevelocity);
+         //printf(" *currentnote.gpio is: %d\n\n", *currentnote.gpio);
+	}
+	/*
+   gpioSetMode(2, PI_INPUT);  // Set GPIO17 as input.
+   gpioSetPullUpDown(2, PI_PUD_DOWN); // Sets as pull-down. 
+   gpioGlitchFilter(2,5000); //set 5ms debounce for gpioSetAlertFunc
    
    gpioSetMode(27, PI_INPUT);  // Set GPIO27 as input.
    gpioSetPullUpDown(27, PI_PUD_DOWN); // Sets as pull-down. 
@@ -162,14 +240,29 @@ To send an event, allocate an event structure (just for a change, you can use a
    gpioSetMode(22, PI_INPUT);  // Set GPIO22 as input.
    gpioSetPullUpDown(22, PI_PUD_DOWN); // Sets as pull-down. 
    gpioGlitchFilter(22,5000); //set 5ms debounce for gpioSetAlertFunc
+   
+   gpioSetMode(5, PI_INPUT);  // Set GPIO22 as input.
+   gpioSetPullUpDown(5, PI_PUD_DOWN); // Sets as pull-down. 
+   gpioGlitchFilter(5,5000); //set 5ms debounce for gpioSetAlertFunc
+    */
+    
+    //struct midinote *userdata;
+    //struct midinote my_userdata;
+    //userdata = malloc(sizeof(struct midinote));
+    //*userdata = my_userdata;
+    
+
+    //*currentnote = gpionote[0];
+    
+    //gpioSetAlertFuncEx(4, aFunction, currentnote);		//note c
     
     while (true)
     { 
-
-		gpioSetAlertFunc(17, aFunction);		//note c
-		gpioSetAlertFunc(27, aFunction);		//note e
-		gpioSetAlertFunc(22, aFunction);		//note g
-
+		sleep(5000);		//sleeping to save resources
+		//gpioSetAlertFunc(2, aFunction);		//note c
+		//gpioSetAlertFunc(27, aFunction);		//note e
+		//gpioSetAlertFunc(22, aFunction);		//note g
+		//gpioSetAlertFuncEx(4, aFunction, currentnote);		//note c
 	
 		
 	}     
