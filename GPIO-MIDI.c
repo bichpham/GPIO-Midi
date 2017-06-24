@@ -1,8 +1,9 @@
 /*
 
-	* compile: gcc -o GPIO-MIDI GPIO-MIDI.c -lasound
+	* compile: gcc -o GPIO-MIDI GPIO-MIDI.c -lasound -lpigpio -lrt
 	* dedicated gpio (4, 17, 27, 22, 5, 6, 13, 19, 26,
-	* 				 	18, 23, 24, 25, 12, 16, 20, 21)	
+	* 				 	18, 23, 24, 25) - note gpio
+	* 						(, 12, 16, 20, 21)	octave up, down, channel up, down pb
 
 
 This program is free software: you can redistribute it and/or modify
@@ -41,9 +42,9 @@ struct midinote
      int notevelocity;
 };
 
-struct midinote gpionote[17];
+struct midinote gpionote[17];		//Create array to store 17 gpio and 17 note 
 
-void aFunction(int gpio, int level, uint32_t tick, void *currentnote)
+void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 {
 	 printf("GPIO %d became %d at %d \n", gpio, level, tick);
 
@@ -53,15 +54,15 @@ void aFunction(int gpio, int level, uint32_t tick, void *currentnote)
 		if ((gpio == gpionote[i].gpio) & level)
 		{
 			snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum, gpionote[i].notevelocity);
-			printf(" notenum on: %d \n", gpionote[i].notenum);
+			printf(" notenum on: %d \n\n", gpionote[i].notenum);
 			snd_seq_event_output(seq, &ev);
 			snd_seq_drain_output(seq);
 		}
 		
 		if ((gpio == gpionote[i].gpio) & !level)
 		{
-			snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum, gpionote[i].notevelocity);
-			printf(" notenum off: %d \n", gpionote[i].notenum);
+			snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum, 64);
+			printf(" notenum off: %d \n\n", gpionote[i].notenum);
 			snd_seq_event_output(seq, &ev);
 			snd_seq_drain_output(seq);
 		}
@@ -105,12 +106,12 @@ midi_channel=0;					//set initial midi channel to be 0
 	gpionote[10].gpio=23;
 	gpionote[11].gpio=24;
 	gpionote[12].gpio=25;
-	gpionote[13].gpio=12;
-	gpionote[14].gpio=16;
-	gpionote[15].gpio=20;
-	gpionote[16].gpio=21;
+	//gpionote[13].gpio=12;		//reserving these for octave up
+	//gpionote[14].gpio=16;		//reserving this for octave down
+	//gpionote[15].gpio=20;		//midi channel up pb
+	//gpionote[16].gpio=21;		//midi channel down pb
     
-   int i;
+
    if (gpioInitialise() < 0)
    {
       fprintf(stderr, "pigpio initialisation failed\n");
@@ -118,19 +119,15 @@ midi_channel=0;					//set initial midi channel to be 0
    }
    
    //setting up gpio and populating midi note number,gpio, and velocity
-   
-   struct midinote *currentnote;
-   currentnote = malloc(sizeof(struct midinote));
-   
+   int i;
    for(i=0; i<17; i++)
 	{
-		gpionote[i].notenum = 60+i;
-		gpionote[i].notevelocity = 127;
+		gpionote[i].notenum = 36+i;
+		gpionote[i].notevelocity = 80;			//max is 127
 		gpioSetMode(gpionote[i].gpio, PI_INPUT);	//Set as input.
 		gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);// Sets as pull-down. 
-		gpioGlitchFilter(gpionote[i].gpio,5000); //set 5ms debounce for gpioSetAlertFunc
-		*currentnote = gpionote[i];
-		gpioSetAlertFuncEx(gpionote[i].gpio, aFunction, currentnote);
+		gpioGlitchFilter(gpionote[i].gpio,4000); //set 4ms debounce for gpioSetAlertFunc
+		gpioSetAlertFunc(gpionote[i].gpio, ProcessMIDIEvent);
 		 printf("     notes : %d \n", i);
          printf(" gpio is: %d \n", gpionote[i].gpio);
          printf(" notenum is: %d \n", gpionote[i].notenum);
@@ -141,14 +138,14 @@ midi_channel=0;					//set initial midi channel to be 0
     { 
 		sleep(2);		
 
-			 
+			/*
 		for(i=0; i<17; i++)
 		{
 			gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_UP);
 			sleep(1);
 			gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);
 			sleep(1);
-		}
+		}*/
 	}     
     
             
