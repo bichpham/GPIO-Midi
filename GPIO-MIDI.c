@@ -44,12 +44,17 @@ struct midinote
 
 struct midinote gpionote[17];		//Create array to store 17 gpio and 17 note 
 
+int notenum_start = 36;		//default start note is c for pedal
+
+bool gpionotessactive = 0;	//detecting whether gpio inputs for notes are active or not
+
+
 void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 {
 	 printf("GPIO %d became %d at %d \n", gpio, level, tick);
 
 	int i; 
-	for(i=0; i<17; i++)
+	for(i=0; i<13; i++)
 	{
 		if ((gpio == gpionote[i].gpio) & level)
 		{
@@ -57,6 +62,7 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 			printf(" notenum on: %d \n\n", gpionote[i].notenum);
 			snd_seq_event_output(seq, &ev);
 			snd_seq_drain_output(seq);
+			
 		}
 		
 		if ((gpio == gpionote[i].gpio) & !level)
@@ -65,7 +71,42 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 			printf(" notenum off: %d \n\n", gpionote[i].notenum);
 			snd_seq_event_output(seq, &ev);
 			snd_seq_drain_output(seq);
+			
 		}
+	}
+}
+
+void UpdateOctave(int gpio, int level, uint32_t tick)
+{
+	// checking gpio 4, 17, 27, 22, 5, 6, 13, 19, 26, 18, 23, 24, and 25 to make sure they are off
+	gpionotessactive = gpioRead(4)||gpioRead(17)||gpioRead(27)||gpioRead(22)||gpioRead(5)||gpioRead(6)
+							||gpioRead(13)||gpioRead(19)||gpioRead(26)||gpioRead(18)||gpioRead(23)||
+								gpioRead(24)||gpioRead(25);			 	
+	
+   //repopulate notenum for octave change
+   int i;
+   if (gpio==12 && (notenum_start < 84) && level && !gpionotessactive)			//Octave up button
+   
+   {
+	   notenum_start = notenum_start+12;
+	   for(i=0; i<13; i++)
+		{
+			gpionote[i].notenum = notenum_start+i;
+
+		}
+		printf(" notenum_start is: %d\n\n",notenum_start);
+	}
+   if (gpio==16 &&(notenum_start > 36) && level && !gpionotessactive)			//Octave down button
+   
+   {
+	   
+	   notenum_start = notenum_start-12;
+	   for(i=0; i<13; i++)
+		{
+			gpionote[i].notenum = notenum_start+i;
+
+		}
+		printf(" notenum_start is: %d\n\n",notenum_start);
 	}
 }
 
@@ -92,7 +133,15 @@ midi_channel=0;					//set initial midi channel to be 0
     /* or */
     snd_seq_ev_set_subs(&ev);        /* send to subscribers of source port */
     
-    //specifying gpio to use for input switch
+
+    
+
+   if (gpioInitialise() < 0)
+   {
+      fprintf(stderr, "pigpio initialisation failed\n");
+      return 1;
+   }
+	//specifying gpio to use for input switch
     gpionote[0].gpio=4;
 	gpionote[1].gpio=17;
 	gpionote[2].gpio=27;
@@ -110,19 +159,14 @@ midi_channel=0;					//set initial midi channel to be 0
 	//gpionote[14].gpio=16;		//reserving this for octave down
 	//gpionote[15].gpio=20;		//midi channel up pb
 	//gpionote[16].gpio=21;		//midi channel down pb
-    
-
-   if (gpioInitialise() < 0)
-   {
-      fprintf(stderr, "pigpio initialisation failed\n");
-      return 1;
-   }
-   
-   //setting up gpio and populating midi note number,gpio, and velocity
+	
+	//AllocateNotes();
+	
+	//setting up gpio and populating default midi note number,gpio, and velocity
    int i;
-   for(i=0; i<17; i++)
+   for(i=0; i<13; i++)
 	{
-		gpionote[i].notenum = 36+i;
+		gpionote[i].notenum = notenum_start+i;
 		gpionote[i].notevelocity = 80;			//max is 127
 		gpioSetMode(gpionote[i].gpio, PI_INPUT);	//Set as input.
 		gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);// Sets as pull-down. 
@@ -133,6 +177,15 @@ midi_channel=0;					//set initial midi channel to be 0
          printf(" notenum is: %d \n", gpionote[i].notenum);
          printf(" notevelocity is: %d\n\n",gpionote[i].notevelocity);
 	}
+	
+	//setup octave up octave down button
+	gpioSetMode(12, PI_INPUT);	//Set as input.
+	gpioSetMode(16, PI_INPUT);	//Set as input.
+	gpioGlitchFilter(12,20000); //set debounce for gpioSetAlertFunc
+	gpioGlitchFilter(16,20000); //set debounce for gpioSetAlertFunc
+	gpioSetAlertFunc(12, UpdateOctave);			// octave up button
+	gpioSetAlertFunc(16, UpdateOctave);			// octave down button
+
     
     while (true)
     { 
