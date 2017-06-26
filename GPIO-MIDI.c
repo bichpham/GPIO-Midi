@@ -1,9 +1,11 @@
 /*
 
-	* compile: gcc -o GPIO-MIDI GPIO-MIDI.c -lasound -lpigpio -lrt
+	* compile: gcc -o GPIO-MIDI GPIO-MIDI.c -lasound -lpigpio -lrt -lwiringPi
 	* dedicated gpio (4, 17, 27, 22, 5, 6, 13, 19, 26,
 	* 				 	18, 23, 24, 25) - note gpio
-	* 						(, 12, 16, 20, 21)	octave up, down, channel up, down pb
+	* 						(, 12, 16)	octave up, down
+	* 						gpio 20 - spare
+	* 						gpio 21 - interupt from MCP23017 I2C IO extension IC
 
 
 This program is free software: you can redistribute it and/or modify
@@ -28,6 +30,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <alsa/asoundlib.h>
 #include <alsa/seq.h>
 #include <pigpio.h>
+
+//library to interface with IO extension chip MCP23017
+#include <wiringPi.h>
+#include <mcp23017.h>
 
 snd_seq_t *seq;		// variable seq is a pointer to sdn-seq_t type
 
@@ -110,6 +116,9 @@ void UpdateOctave(int gpio, int level, uint32_t tick)
 	}
 }
 
+void UpdateI2C(int gpio, int level, uint32_t tick)
+{
+}
 
 int main()
 {
@@ -169,7 +178,7 @@ midi_channel=0;					//set initial midi channel to be 0
 		gpionote[i].notenum = notenum_start+i;
 		gpionote[i].notevelocity = 80;			//max is 127
 		gpioSetMode(gpionote[i].gpio, PI_INPUT);	//Set as input.
-		gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);// Sets as pull-down. 
+		gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);// Set as pull-down. 
 		gpioGlitchFilter(gpionote[i].gpio,4000); //set 4ms debounce for gpioSetAlertFunc
 		gpioSetAlertFunc(gpionote[i].gpio, ProcessMIDIEvent);
 		 printf("     notes : %d \n", i);
@@ -181,10 +190,33 @@ midi_channel=0;					//set initial midi channel to be 0
 	//setup octave up octave down button
 	gpioSetMode(12, PI_INPUT);	//Set as input.
 	gpioSetMode(16, PI_INPUT);	//Set as input.
+	gpioSetPullUpDown(12, PI_PUD_DOWN);// Set as pull-down. 
+	gpioSetPullUpDown(16, PI_PUD_DOWN);// Set as pull-down. 
 	gpioGlitchFilter(12,20000); //set debounce for gpioSetAlertFunc
 	gpioGlitchFilter(16,20000); //set debounce for gpioSetAlertFunc
 	gpioSetAlertFunc(12, UpdateOctave);			// octave up button
 	gpioSetAlertFunc(16, UpdateOctave);			// octave down button
+	
+	//setup MCP23017 for extra inputs
+	gpioSetMode(21, PI_INPUT);	//Set gpio 21 to receive interrupt from MCP23017
+	gpioSetPullUpDown(21, PI_PUD_DOWN);// Set as pull-down. 
+	gpioGlitchFilter(21,4000); //set single debounce for all inputs from MCP23107
+	
+	wiringPiSetup () ;
+	mcp23017Setup (100, 0x20) ;
+	
+	//setup interrupt
+	//wiringPiI2CWriteReg16 (0x20, 0x02, 0xFF) ;		//setup interrupt
+	//wiringPiI2CWriteReg16 (0x20, 0x04, 0xFF) ;		//setup interrupt
+	
+	//set everything at address 20 to be inputs and pulled up.
+	for(i=0; i<16; i++)
+	{
+		pinMode (100 + i, INPUT);
+		pullUpDnControl (100 + i, PUD_UP) ;
+	}
+	
+	gpioSetAlertFunc(21, UpdateI2C);			// read I2C inputs if there are changes from IC
 
     
     while (true)
