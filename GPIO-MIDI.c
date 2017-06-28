@@ -34,6 +34,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //library to interface with IO extension chip MCP23017
 #include <wiringPi.h>
 #include <mcp23017.h>
+#include <mcp23x0817.h>
+#include "wiringPiI2C.h"
 
 snd_seq_t *seq;		// variable seq is a pointer to sdn-seq_t type
 
@@ -123,6 +125,8 @@ void UpdateI2C(int gpio, int level, uint32_t tick)
 int main()
 {
 	
+	printf("Starting main routine \n");
+	
 midi_channel=0;					//set initial midi channel to be 0
        
     snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0);
@@ -181,10 +185,10 @@ midi_channel=0;					//set initial midi channel to be 0
 		gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);// Set as pull-down. 
 		gpioGlitchFilter(gpionote[i].gpio,4000); //set 4ms debounce for gpioSetAlertFunc
 		gpioSetAlertFunc(gpionote[i].gpio, ProcessMIDIEvent);
-		 printf("     notes : %d \n", i);
-         printf(" gpio is: %d \n", gpionote[i].gpio);
-         printf(" notenum is: %d \n", gpionote[i].notenum);
-         printf(" notevelocity is: %d\n\n",gpionote[i].notevelocity);
+		 //printf("     notes : %d \n", i);
+         //printf(" gpio is: %d \n", gpionote[i].gpio);
+         //printf(" notenum is: %d \n", gpionote[i].notenum);
+         //printf(" notevelocity is: %d\n\n",gpionote[i].notevelocity);
 	}
 	
 	//setup octave up octave down button
@@ -197,14 +201,32 @@ midi_channel=0;					//set initial midi channel to be 0
 	gpioSetAlertFunc(12, UpdateOctave);			// octave up button
 	gpioSetAlertFunc(16, UpdateOctave);			// octave down button
 	
-	//setup MCP23017 for extra inputs
+	
+	
+	//setup pin 21 for MCP23017 for extra inputs
 	gpioSetMode(21, PI_INPUT);	//Set gpio 21 to receive interrupt from MCP23017
 	gpioSetPullUpDown(21, PI_PUD_DOWN);// Set as pull-down. 
 	gpioGlitchFilter(21,4000); //set single debounce for all inputs from MCP23107
 	
 	wiringPiSetup () ;
-	mcp23017Setup (100, 0x20) ;
+	//mcp23017Setup (100, 0x20) ;
 	
+	// set up MCP23017
+	int fd ;
+	
+	if ((fd = wiringPiI2CSetup (0x20)) < 0)
+	{
+    printf("wiringPiFindNode failed\n\r");}
+    
+    //setup bank B
+	wiringPiI2CWriteReg8 (fd, MCP23x17_IOCON, 0x00) ;		//MCP23017 io configuration
+	wiringPiI2CWriteReg8 (fd, MCP23x17_IODIRB, 0xff) ;		//set all to be inputs
+	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONB, 0xff) ;		//set all pins for interupt
+	wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALB, 0xff) ;		//set default value to be 1 for all
+	wiringPiI2CWriteReg8 (fd, MCP23x17_GPINTENB, 0xff) ; 	//enable interupt on all pins
+	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUB, 0xff) ;		//set inputs for pull up 
+	wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPB ); 			// clear interrupt flag
+	/*
 	//setup interrupt
 	//wiringPiI2CWriteReg16 (0x20, 0x02, 0xFF) ;		//setup interrupt
 	//wiringPiI2CWriteReg16 (0x20, 0x04, 0xFF) ;		//setup interrupt
@@ -217,8 +239,11 @@ midi_channel=0;					//set initial midi channel to be 0
 	}
 	
 	gpioSetAlertFunc(21, UpdateI2C);			// read I2C inputs if there are changes from IC
-
+	
+	*/
     
+    printf("MCP23x17_GPINTENA: 0x%02x \n", MCP23x17_GPINTENA);
+    //printf("mcp23017Setup: %d \n", mcp23017Setup (100, 0x20));
     while (true)
     { 
 		sleep(2);		
@@ -231,7 +256,9 @@ midi_channel=0;					//set initial midi channel to be 0
 			gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);
 			sleep(1);
 		}*/
-	}     
+		
+		
+	}
     
             
  return 0;
