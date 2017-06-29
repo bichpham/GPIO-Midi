@@ -191,6 +191,7 @@ midi_channel=0;					//set initial midi channel to be 0
          //printf(" notevelocity is: %d\n\n",gpionote[i].notevelocity);
 	}
 	
+
 	//setup octave up octave down button
 	gpioSetMode(12, PI_INPUT);	//Set as input.
 	gpioSetMode(16, PI_INPUT);	//Set as input.
@@ -200,17 +201,7 @@ midi_channel=0;					//set initial midi channel to be 0
 	gpioGlitchFilter(16,20000); //set debounce for gpioSetAlertFunc
 	gpioSetAlertFunc(12, UpdateOctave);			// octave up button
 	gpioSetAlertFunc(16, UpdateOctave);			// octave down button
-	
-	
-	
-	//setup pin 21 for MCP23017 for extra inputs
-	gpioSetMode(21, PI_INPUT);	//Set gpio 21 to receive interrupt from MCP23017
-	gpioSetPullUpDown(21, PI_PUD_DOWN);// Set as pull-down. 
-	gpioGlitchFilter(21,4000); //set single debounce for all inputs from MCP23107
-	
-	wiringPiSetup () ;
-	//mcp23017Setup (100, 0x20) ;
-	
+
 	// set up MCP23017
 	int fd ;
 	
@@ -218,14 +209,34 @@ midi_channel=0;					//set initial midi channel to be 0
 	{
     printf("wiringPiFindNode failed\n\r");}
     
-    //setup bank B
-	wiringPiI2CWriteReg8 (fd, MCP23x17_IOCON, 0x00) ;		//MCP23017 io configuration
+	wiringPiI2CWriteReg8 (fd, MCP23x17_IOCON, 0x40) ;		//MCP23017 io configuration
+	wiringPiI2CWriteReg8 (fd, MCP23x17_IODIRA, 0xff) ;		//set all to be inputs
 	wiringPiI2CWriteReg8 (fd, MCP23x17_IODIRB, 0xff) ;		//set all to be inputs
-	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONB, 0xff) ;		//set all pins for interupt
-	wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALB, 0xff) ;		//set default value to be 1 for all
+	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONA, 0x00) ;		//compare against previous value
+	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONB, 0x00) ;		//compare against previous value
+	//wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALB, 0xff) ;		//set default value to be 1 for all
+	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUA, 0xff) ;		//set inputs for pull up 
+	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUB, 0xff) ;		//set inputs for pull up
+	wiringPiI2CWriteReg8 (fd, MCP23x17_GPINTENA, 0xff) ; 	//enable interupt on all pins
 	wiringPiI2CWriteReg8 (fd, MCP23x17_GPINTENB, 0xff) ; 	//enable interupt on all pins
-	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUB, 0xff) ;		//set inputs for pull up 
+	wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPA ); 			// clear interrupt flag	
 	wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPB ); 			// clear interrupt flag
+
+	
+	
+	//setup pin 21 for MCP23017 for extra inputs
+	gpioSetMode(21, PI_INPUT);	//Set gpio 21 to receive interrupt from MCP23017
+	gpioSetPullUpDown(21, PI_PUD_DOWN);// Set as pull-down. 
+	gpioGlitchFilter(21,4000); //set single debounce for all inputs from MCP23107
+	
+	gpioSetAlertFunc(21, UpdateI2C);			// read I2C inputs if there are changes from IC
+	
+	wiringPiSetup () ;
+	//mcp23017Setup (100, 0x20) ;
+	
+
+	
+
 	/*
 	//setup interrupt
 	//wiringPiI2CWriteReg16 (0x20, 0x02, 0xFF) ;		//setup interrupt
@@ -238,7 +249,7 @@ midi_channel=0;					//set initial midi channel to be 0
 		pullUpDnControl (100 + i, PUD_UP) ;
 	}
 	
-	gpioSetAlertFunc(21, UpdateI2C);			// read I2C inputs if there are changes from IC
+
 	
 	*/
     
