@@ -1,0 +1,16 @@
+#include<stdio.h>
+//#include<string.h>
+
+int mask_in[8];		//input mask ( ex: mask_in[0] for pin 0)
+
+int main(void)
+{
+	printf("print something %d \n", 8 & mask_in0);
+	
+	int i;
+	for (i=0; i<8; i++){
+		mask_in[i] = 1<<i;
+		printf("mask_in[%d]=0x%02x\n",i,mask_in[i]);
+		
+	}
+}
