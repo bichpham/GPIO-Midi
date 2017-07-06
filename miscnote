@@ -1,6 +1,8 @@
 #include<stdio.h>
 
+
 int mask_in[8];		//input mask ( ex: mask_in[0] for pin 0)
+int mask_previous[8];
 
 int main(void)
 {
@@ -12,6 +14,14 @@ int main(void)
 		
 	}
 	
-	printf("Press any key to quit \n");
+	printf("Press any key to continue \n");
 	getchar();
+	
+
+	
+	for (i=0; i<8; i++){
+		mask_previous[i] = mask_in[i];
+		printf("mask_previous[%d]=0x%02x\n",i,mask_previous[i]);
+		
+	}
 }
