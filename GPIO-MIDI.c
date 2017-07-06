@@ -121,16 +121,28 @@ void UpdateOctave(int gpio, int level, uint32_t tick)
 
 void UpdateI2C(int gpio, int level, uint32_t tick)
 {
-	printf("MCP23017 Interrupt \n");
-	/*
-		// set up MCP23017
+	//int GPIOA_Previous;
+	//int GPIOB_Previous;
+	
+	// set up MCP23017
 	int fd ;
 	
 	if ((fd = wiringPiI2CSetup (0x20)) < 0)
 	{
     printf("wiringPiFindNode failed\n\r");}
-	printf("MCP23x17_GPIOB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB )); //read gpio register to get value and to clear interupt
-	* */
+	
+	//while ((GPIOA_Previous !=wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA)) || (GPIOB_Previous !=wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB)))
+	while (!level)			
+	{
+		printf("MCP23017 Interrupt \n");
+
+		printf("MCP23x17_GPIOB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB )); //read gpio register to get value and to clear interupt
+		printf("MCP23x17_GPIOA: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA )); //read gpio register to get value and to clear interupt
+		
+		//GPIOA_Previous = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA );
+		//GPIOB_Previous = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB );
+	}
+	//printf("MCP23017 Interrupt \n");
 }
 
 int main()
@@ -220,40 +232,41 @@ midi_channel=0;					//set initial midi channel to be 0
 	if ((fd = wiringPiI2CSetup (0x20)) < 0)
 	{
     printf("wiringPiFindNode failed\n\r");}
-	
-	/*
-IOCON Bit Descriptions
-bit 7 BANK: Controls how the registers are addressed
-	1 = The registers associated with each port are separated into different banks
-	0 = The registers are in the same bank (addresses are sequential)
-bit 6 MIRROR: INT Pins Mirror bit
-	1 = The INT pins are internally connected
-	0 = The INT pins are not connected. INTA is associated with PortA and INTB is associated with PortB
-bit 5 SEQOP: Sequential Operation mode bit.
-	1 = Sequential operation disabled, address pointer does not increment.
-	0 = Sequential operation enabled, address pointer increments.
-bit 4 DISSLW: Slew Rate control bit for SDA output.
-	1 = Slew rate disabled.
-	0 = Slew rate enabled.
-bit 3 HAEN: Hardware Address Enable bit (MCP23S17 only).
-	Address pins are always enabled on MCP23017.
-	1 = Enables the MCP23S17 address pins.
-	0 = Disables the MCP23S17 address pins.
-bit 2 ODR: This bit configures the INT pin as an open-drain output.
-	1 = Open-drain output (overrides the INTPOL bit).
-	0 = Active driver output (INTPOL bit sets the polarity).
-bit 1 INTPOL: This bit sets the polarity of the INT output pin.
-	1 = Active-high.
-	0 = Active-low.
-bit 0 Unimplemented: Read as ‘0’
-*/
+    
+    /*
+	IOCON Bit Descriptions
+	bit 7 BANK: Controls how the registers are addressed
+		1 = The registers associated with each port are separated into different banks
+		0 = The registers are in the same bank (addresses are sequential)
+	bit 6 MIRROR: INT Pins Mirror bit
+		1 = The INT pins are internally connected
+		0 = The INT pins are not connected. INTA is associated with PortA and INTB is associated with PortB
+	bit 5 SEQOP: Sequential Operation mode bit.
+		1 = Sequential operation disabled, address pointer does not increment.
+		0 = Sequential operation enabled, address pointer increments.
+	bit 4 DISSLW: Slew Rate control bit for SDA output.
+		1 = Slew rate disabled.
+		0 = Slew rate enabled.
+	bit 3 HAEN: Hardware Address Enable bit (MCP23S17 only).
+		Address pins are always enabled on MCP23017.
+		1 = Enables the MCP23S17 address pins.
+		0 = Disables the MCP23S17 address pins.
+	bit 2 ODR: This bit configures the INT pin as an open-drain output.
+		1 = Open-drain output (overrides the INTPOL bit).
+		0 = Active driver output (INTPOL bit sets the polarity).
+	bit 1 INTPOL: This bit sets the polarity of the INT output pin.
+		1 = Active-high.
+		0 = Active-low.
+	bit 0 Unimplemented: Read as ‘0’
+	*/
     
 	wiringPiI2CWriteReg8 (fd, MCP23x17_IOCON, 0x40) ;		//MCP23017 io configuration
 	wiringPiI2CWriteReg8 (fd, MCP23x17_IODIRA, 0xff) ;		//set all to be inputs
 	wiringPiI2CWriteReg8 (fd, MCP23x17_IODIRB, 0xff) ;		//set all to be inputs
-	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONA, 0x00) ;		//compare against previous value
-	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONB, 0x00) ;		//compare against previous value
-	//wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALB, 0xff) ;		//set default value to be 1 for all
+	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONA, 0xff) ;		//compare with DEFVAL
+	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONB, 0xff) ;		//compare with DEFVAL
+	wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALA, 0xff) ;		//set default value to be 1 for all
+	wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALB, 0xff) ;		//set default value to be 1 for all
 	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUA, 0xff) ;		//set inputs for pull up 
 	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUB, 0xff) ;		//set inputs for pull up
 	wiringPiI2CWriteReg8 (fd, MCP23x17_GPINTENA, 0xff) ; 	//enable interupt on all pins
@@ -309,7 +322,7 @@ bit 0 Unimplemented: Read as ‘0’
 			sleep(1);
 		}*/
 		//wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB ); // clear interrupt
-		printf("MCP23x17_GPIOB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB ));
+		//printf("MCP23x17_GPIOB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB ));
 		
 	}
     
