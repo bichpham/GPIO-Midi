@@ -25,3 +25,11 @@ int main(void)
 		
 	}
 }
+
+void bFunction(void)
+{
+   printf("two seconds have elapsed");
+}
+
+// call bFunction every 2000 milliseconds
+gpioSetTimerFunc(0, 2000, bFunction);
