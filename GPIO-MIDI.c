@@ -57,6 +57,14 @@ int notenum_start = 36;		//default start note is c for pedal
 
 bool gpionotessactive = 0;	//detecting whether gpio inputs for notes are active or not
 
+// set up MCP23017
+int fd ;//global variable for i2c devices
+
+bool mcp23017_1_INT =1;
+
+int INTCAPB_Previous = 0;
+int INTCAPA_Previous = 0;
+
 
 void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 {
@@ -121,28 +129,36 @@ void UpdateOctave(int gpio, int level, uint32_t tick)
 
 void UpdateI2C(int gpio, int level, uint32_t tick)
 {
-	//int GPIOA_Previous;
-	//int GPIOB_Previous;
+	mcp23017_1_INT = level;
 	
-	// set up MCP23017
-	int fd ;
+	/*
 	
-	if ((fd = wiringPiI2CSetup (0x20)) < 0)
+	if (!mcp23017_1_INT) //if mcp23017 interupt is active, read the inputs to clear interupt
 	{
-    printf("wiringPiFindNode failed\n\r");}
-	
-	//while ((GPIOA_Previous !=wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA)) || (GPIOB_Previous !=wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB)))
-	while (!level)			
-	{
-		printf("MCP23017 Interrupt \n");
-
-		printf("MCP23x17_GPIOB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB )); //read gpio register to get value and to clear interupt
-		printf("MCP23x17_GPIOA: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA )); //read gpio register to get value and to clear interupt
+		//sleep(1);
+		gpioDelay(10000);	//wait for 10ms for register to update before clearing
+		printf("MCP23x17_INTCAPB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPB )); //read gpio register to get value and to clear interupt
+		printf("MCP23x17_INTCAPA: 0x%02x \n\n", wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPA )); //read gpio register to get value and to clear interupt
 		
-		//GPIOA_Previous = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA );
-		//GPIOB_Previous = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB );
+	}*/
+}
+
+void UpdateI2C_Polling(void)
+{
+/*
+	
+	if ((INTCAPB_Previous != wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPB)) || ((INTCAPA_Previous != wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPA))) || !mcp23017_1_INT ) 
+	{
+		//gpioDelay(10000);	//wait for 10ms for register to update before clearing
+		printf("MCP23x17_GPIOB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB )); //read gpio register to get value and to clear interupt
+		printf("MCP23x17_GPIOA: 0x%02x \n\n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA )); //read gpio register to get value and to clear interupt
+		
 	}
-	//printf("MCP23017 Interrupt \n");
+	INTCAPB_Previous = wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPB );
+	INTCAPA_Previous = wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPA );
+	*/
+	wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB )
+	wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA )
 }
 
 int main()
@@ -227,7 +243,6 @@ midi_channel=0;					//set initial midi channel to be 0
 	gpioSetAlertFunc(16, UpdateOctave);			// octave down button
 
 	// set up MCP23017
-	int fd ;
 	
 	if ((fd = wiringPiI2CSetup (0x20)) < 0)
 	{
@@ -263,10 +278,10 @@ midi_channel=0;					//set initial midi channel to be 0
 	wiringPiI2CWriteReg8 (fd, MCP23x17_IOCON, 0x40) ;		//MCP23017 io configuration
 	wiringPiI2CWriteReg8 (fd, MCP23x17_IODIRA, 0xff) ;		//set all to be inputs
 	wiringPiI2CWriteReg8 (fd, MCP23x17_IODIRB, 0xff) ;		//set all to be inputs
-	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONA, 0xff) ;		//compare with DEFVAL
-	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONB, 0xff) ;		//compare with DEFVAL
-	wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALA, 0xff) ;		//set default value to be 1 for all
-	wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALB, 0xff) ;		//set default value to be 1 for all
+	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONA, 0x00) ;		//compare with previous value
+	wiringPiI2CWriteReg8 (fd, MCP23x17_INTCONB, 0x00) ;		//compare with previous value
+	//wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALA, 0xff) ;		//set default value to be 1 for all
+	//wiringPiI2CWriteReg8 (fd, MCP23x17_DEFVALB, 0xff) ;		//set default value to be 1 for all
 	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUA, 0xff) ;		//set inputs for pull up 
 	wiringPiI2CWriteReg8 (fd, MCP23x17_GPPUB, 0xff) ;		//set inputs for pull up
 	wiringPiI2CWriteReg8 (fd, MCP23x17_GPINTENA, 0xff) ; 	//enable interupt on all pins
@@ -279,15 +294,16 @@ midi_channel=0;					//set initial midi channel to be 0
 	//setup gpio 21 for MCP23017 for extra inputs
 	gpioSetMode(21, PI_INPUT);	//Set gpio 21 to receive interrupt from MCP23017
 	gpioSetPullUpDown(21, PI_PUD_UP);// Set as pull-down. 
-	gpioGlitchFilter(21,4000); //set single debounce for all inputs from MCP23107
+	gpioGlitchFilter(21,1000); //set debounce for all mcp23017 inputs 
 	
-	gpioSetAlertFunc(21, UpdateI2C);			// read I2C inputs if there are changes from IC
+	//gpioSetAlertFunc(21, UpdateI2C);			// read I2C inputs if there are changes from IC
 	
-	wiringPiSetup () ;
+	//wiringPiSetup () ;
 	//mcp23017Setup (100, 0x20) ;
 	
 
-	
+	// call UpdateI2C_Polling every 10 milliseconds
+	gpioSetTimerFunc(0, 10, UpdateI2C_Polling);
 
 	/*
 	//setup interrupt
@@ -309,9 +325,9 @@ midi_channel=0;					//set initial midi channel to be 0
     
     
     //printf("mcp23017Setup: %d \n", mcp23017Setup (100, 0x20));
-    while (true)
+    while (1)				
     { 
-		sleep(2);		
+		sleep(10);		
 
 			/*
 		for(i=0; i<17; i++)
@@ -320,12 +336,21 @@ midi_channel=0;					//set initial midi channel to be 0
 			sleep(1);
 			gpioSetPullUpDown(gpionote[i].gpio, PI_PUD_DOWN);
 			sleep(1);
-		}*/
+		}
 		//wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB ); // clear interrupt
 		//printf("MCP23x17_GPIOB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB ));
+		if (!mcp23017_1_INT) //if mcp23017 interupt is active, read the inputs to clear interupt
+		{
+			sleep(1);
+			printf("MCP23x17_INTCAPB: 0x%02x \n", wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPB )); //read gpio register to get value and to clear interupt
+			printf("MCP23x17_INTCAPA: 0x%02x \n\n", wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPA )); //read gpio register to get value and to clear interupt
+			
+		}
+		//getchar();*/
 		
 	}
-    
+	
+
             
  return 0;
 }
