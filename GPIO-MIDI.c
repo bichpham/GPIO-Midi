@@ -137,26 +137,41 @@ void InteruptAlert(int gpio, int level, uint32_t tick)
 }
 
 int tempcount =0;
+uint32_t startTick, endTick, prevTick;
+int diffTick, debounceTick;
 
 void UpdateI2C_Polling(void)
 {
 
 	if(!mcp23017_1_INT) 			//only read mcp23017 if there are changes from previous value interupt
 	{
+		startTick = gpioTick();
+		
 		INTCAPB_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
 		INTCAPA_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA);
 		//gpioDelay(1000);	//wait for 1ms for register to update before clearing
-		
+		endTick = gpioTick();
+		diffTick = endTick - startTick;
+
+		printf("reading mcp23017 took %d microseconds \n\n", diffTick);
+
+		debounceTick = gpioTick() - prevTick;
 		if ((INTCAPB_Previous != INTCAPB_Current) || (INTCAPA_Previous != INTCAPA_Current))
 		{
 			
 			printf("tempcount %d \n", tempcount++);
+			//printf("Current Tick: %d \n", gpioTick()); 
+			printf("debounce tick %d microseconds \n", debounceTick);
 			printf("MCP23x17_GPIOB: 0x%02x \n", INTCAPB_Current); //read gpio register to get value and to clear interupt
 			printf("MCP23x17_GPIOA: 0x%02x \n\n", INTCAPA_Current); //read gpio register to get value and to clear interupt
 			INTCAPB_Previous = INTCAPB_Current;
 			INTCAPA_Previous = INTCAPA_Current;
 			
+
+			
 		}
+		prevTick = startTick;
+		
 	}
 
 }
@@ -294,12 +309,12 @@ midi_channel=0;					//set initial midi channel to be 0
 	//setup gpio 21 for MCP23017 for extra inputs
 	gpioSetMode(21, PI_INPUT);	//Set gpio 21 to receive interrupt from MCP23017
 	gpioSetPullUpDown(21, PI_PUD_UP);// Set as pull-down. 
-	gpioGlitchFilter(21,500); //set debounce for all mcp23017 inputs 
+	gpioGlitchFilter(21,5000); //set debounce for all mcp23017 inputs 
 	
 	gpioSetAlertFunc(21, InteruptAlert);			// Alerting that there is something change in mcp23017 to update inputs
 	
 	
-	// call UpdateI2C_Polling every 20 milliseconds
+	// call UpdateI2C_Polling every 10 milliseconds
 	gpioSetTimerFunc(0, 10, UpdateI2C_Polling);
 
 
