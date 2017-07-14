@@ -53,6 +53,18 @@ struct midinote
 
 struct midinote gpionote[17];		//Create array to store 17 gpio and 17 note 
 
+struct mcp_device
+{
+	int gpioA;
+	int gpioB;
+	int prev_gpioA;
+	int prev_gpioB;
+	uint32_t tick_stamp;
+	
+};
+
+struct mcp_device mymcp[20];		//create 20 of them to to debounce notes.
+
 int notenum_start = 36;		//default start note is c for pedal
 
 bool gpionotessactive = 0;	//detecting whether gpio inputs for notes are active or not
@@ -134,82 +146,98 @@ int tempcount =0;
 uint32_t prevTick;
 int debounceTick;
 
+int MAX_CHECKS = 10; 		//checks before a switch is debounced
+int Debounced_State; 	//Debounced state of the switches
+int State[10]; 	// Array that maintains bounce status
+int Index = 0;				// Pointer into State
+
+
 void InteruptAlert(int gpio, int level, uint32_t tick)
 {
-	//gpioDelay(600);			//wait for register to update (450 uS per datasheet)
-	mcp23017_1_INT = level;			//interrupt from mcp23017 to indicate changes from previous value
 	
-	if(!mcp23017_1_INT) 			//read mcp23017 if there are changes
-	{
-		
-		INTCAPB_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-		INTCAPA_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA);
+	mcp23017_1_INT = level;			//interrupt from mcp23017 to indicate changes from previous value
+	int i, j;
+	
+	debounceTick = gpioTick() - prevTick;	//debounceTick should be very small if value just changed
 
-		if ((INTCAPB_Previous != INTCAPB_Current) || (INTCAPA_Previous != INTCAPA_Current))
-		{
+			State[Index] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+			++Index;
+
+			j=0xff;
 			
-			printf("tempcount %d \n", tempcount++);
-			//printf("Current Tick: %d \n", gpioTick()); 
-			printf("debounce tick %d microseconds \n", debounceTick);
-			printf("MCP23x17_GPIOB: 0x%02x \n", INTCAPB_Current); //read gpio register to get value and to clear interupt
-			printf("MCP23x17_GPIOA: 0x%02x \n\n", INTCAPA_Current); //read gpio register to get value and to clear interupt
-			prevTick = gpioTick();				//whenever the value just changed. restart timer
+
+
+
+			for (i=0; i<MAX_CHECKS; i++)
+			{ 
+				//State[i] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+				j = j & State[i];
+			}
+
+			Debounced_State = j;
+			if(Index>=MAX_CHECKS) Index=0;
+			
+			
+		if(!mcp23017_1_INT) 			//When interupt is active (low), read to clear the interupt
+		{
+					
+			//INTCAPB_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+			//INTCAPA_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA);
+
+
+			
+
+
+
+
 		}
 		
 		
+		if(mcp23017_1_INT) 			//When interupt not active (high), reading from mcp23017 is done.
+		{
+
+
+			
+			//printf("tempcount %d \n", tempcount++);
+			//printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
+			//printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
+		}
 		
-	}
+		if(level == 2)
+		{
+			if (1)
+			{
+				if ((INTCAPB_Previous != Debounced_State) || (INTCAPA_Previous != INTCAPA_Current))		//populate value only if it is different from previous
+				{	
+					printf("tempcount %d \n", tempcount++);
+					//printf("Current Tick: %d \n", gpioTick()); 
+					//printf("debounce tick %d microseconds \n", debounceTick);
+					//printf("MCP23x17_GPIOB: 0x%02x \n", INTCAPB_Current); //read gpio register to get value and to clear interupt
+					//printf("MCP23x17_GPIOA: 0x%02x \n\n", INTCAPA_Current); //read gpio register to get value and to clear interupt
+					printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
+				}
+			}
+			
+		}
+
+		INTCAPB_Previous = Debounced_State;
 	
-	if(mcp23017_1_INT) 			//When interupt goes high, reading from mcp23017 is done. We can populate reading here
-	{
-		debounceTick = gpioTick() - prevTick;	//debounceTick should be very small if value just changed
-		INTCAPB_Previous = INTCAPB_Current;
-		INTCAPA_Previous = INTCAPA_Current;	
-	}
-	
+		prevTick = gpioTick();				//whenever the value just changed. restart timer
+		
+
 }
 
 
 
 void UpdateI2C_Polling(void)
 {
-/*
-	if(!mcp23017_1_INT) 			//only read mcp23017 if there are changes from previous value interupt
+
+	if(!mcp23017_1_INT & ((INTCAPB_Previous = INTCAPB_Current) || (INTCAPA_Previous = INTCAPA_Current))) 			//only read mcp23017 if there are changes from previous value interupt
 	{
-		
-		startTick = gpioTick();
-		
-		INTCAPB_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-		INTCAPA_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA);
-		//gpioDelay(1000);	//wait for 1ms for register to update before clearing
-		endTick = gpioTick();
-		diffTick = endTick - startTick;
-
-		printf("reading mcp23017 took %d microseconds \n\n", diffTick);
-
-		debounceTick = gpioTick() - prevTick;
-		
-		if (((INTCAPB_Previous = INTCAPB_Current) || (INTCAPA_Previous = INTCAPA_Current)) & debounceTick > 20000)
-		{
-			printf("tempcount %d \n", tempcount++);
-			//printf("Current Tick: %d \n", gpioTick()); 
-			printf("debounce tick %d microseconds \n", debounceTick);
-			printf("MCP23x17_GPIOB: 0x%02x \n", INTCAPB_Current); //read gpio register to get value and to clear interupt
-			printf("MCP23x17_GPIOA: 0x%02x \n\n", INTCAPA_Current); //read gpio register to get value and to clear interupt
-		}
-		
-		if ((INTCAPB_Previous != INTCAPB_Current) || (INTCAPA_Previous != INTCAPA_Current))
-		{
-			
-
-			INTCAPB_Previous = INTCAPB_Current;
-			INTCAPA_Previous = INTCAPA_Current;
-			
-		}
-		prevTick = startTick;
-		
+		wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+		wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA);
 	}
-	*/
+	
 
 }
 
@@ -348,10 +376,14 @@ midi_channel=0;					//set initial midi channel to be 0
 	gpioSetPullUpDown(21, PI_PUD_UP);// Set as pull-down. 
 	gpioGlitchFilter(21,0); //set debounce for all mcp23017 inputs 
 	
+
 	gpioSetAlertFunc(21, InteruptAlert);			// Alerting that there is something change in mcp23017 to update inputs
+	//  or approximately every 100msec
+	gpioSetWatchdog(21, 100);
 	
+
 	
-	// call UpdateI2C_Polling every 10 milliseconds
+	// call UpdateI2C_Polling every 10 milliseconds, in case it get stuck
 	//gpioSetTimerFunc(0, 10, UpdateI2C_Polling);
 
 
