@@ -154,6 +154,7 @@ int Index = 0;				// Pointer into State
 
 void InteruptAlert(int gpio, int level, uint32_t tick)
 {
+	/*
 	
 	mcp23017_1_INT = level;			//interrupt from mcp23017 to indicate changes from previous value
 	int i, j;
@@ -223,19 +224,60 @@ void InteruptAlert(int gpio, int level, uint32_t tick)
 		INTCAPB_Previous = Debounced_State;
 	
 		prevTick = gpioTick();				//whenever the value just changed. restart timer
+		*/
 		
+	State[Index] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+	++Index;
+	int i, j;
 
+	j=0xff;
+
+	for (i=0; i<MAX_CHECKS; i++)
+	{ 
+		//State[i] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+		j = j & State[i];
+	}
+
+	Debounced_State = j;
+	if(Index>=MAX_CHECKS) Index=0;
+	debounceTick = gpioTick() - prevTick;	//debounceTick should be very small if value just changed
+	
+	if((INTCAPB_Previous != Debounced_State)) 			//only read mcp23017 if there are changes from previous value interupt
+	{
+		printf("Debounce Tick: %d \n", debounceTick); 
+		printf("tempcount %d \n", tempcount++);
+		printf("MCP23x17_GPIOB: 0x%02x \n\n", Debounced_State); //read gpio register to get value and to clear interupt
+		INTCAPB_Previous = Debounced_State;
+	}
+	if(!mcp23017_1_INT) {
+		prevTick = gpioTick();				//whenever the value just changed. restart timer
+	}
 }
 
 
 
 void UpdateI2C_Polling(void)
 {
+	State[Index] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+	++Index;
+	int i, j;
 
-	if(!mcp23017_1_INT & ((INTCAPB_Previous = INTCAPB_Current) || (INTCAPA_Previous = INTCAPA_Current))) 			//only read mcp23017 if there are changes from previous value interupt
+	j=0xff;
+
+	for (i=0; i<MAX_CHECKS; i++)
+	{ 
+		//State[i] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
+		j = j & State[i];
+	}
+
+	Debounced_State = j;
+	if(Index>=MAX_CHECKS) Index=0;
+
+	if((INTCAPB_Previous != Debounced_State)) 			//only read mcp23017 if there are changes from previous value interupt
 	{
-		wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-		wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA);
+		printf("tempcount %d \n", tempcount++);
+		printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
+		INTCAPB_Previous = Debounced_State;
 	}
 	
 
@@ -372,14 +414,13 @@ midi_channel=0;					//set initial midi channel to be 0
 	
 	
 	//setup gpio 21 for MCP23017 for extra inputs
+	//This works fine for reed switches but mechanical switch still bounce a lot.
 	gpioSetMode(21, PI_INPUT);	//Set gpio 21 to receive interrupt from MCP23017
 	gpioSetPullUpDown(21, PI_PUD_UP);// Set as pull-down. 
-	gpioGlitchFilter(21,0); //set debounce for all mcp23017 inputs 
-	
-
+	gpioGlitchFilter(21,2000); //set debounce for all mcp23017 inputs 
 	gpioSetAlertFunc(21, InteruptAlert);			// Alerting that there is something change in mcp23017 to update inputs
-	//  or approximately every 100msec
-	gpioSetWatchdog(21, 100);
+	//  or approximately every 5msec run InteruptAlert
+	gpioSetWatchdog(21, 5);
 	
 
 	
