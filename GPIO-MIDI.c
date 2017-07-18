@@ -74,11 +74,13 @@ int fd ;//global variable for i2c devices
 
 bool mcp23017_1_INT =1;
 
-int INTCAPB_Previous = 0;
-int INTCAPA_Previous = 0;
+int INTCAPB_Previous = 0xff;		//default state is off
+int INTCAPA_Previous = 0xff;		//default state is off
 
 int INTCAPB_Current = 0;
 int INTCAPA_Current = 0;
+
+int mask_in[8];		//input mask ( ex: mask_in[0] for pin 0). This is to mask input from mcp23017
 
 
 void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
@@ -147,84 +149,14 @@ uint32_t prevTick;
 int debounceTick;
 
 int MAX_CHECKS = 10; 		//checks before a switch is debounced
-int Debounced_State; 	//Debounced state of the switches
+int Debounced_StateB; 	//Debounced state of the switches
 int State[10]; 	// Array that maintains bounce status
 int Index = 0;				// Pointer into State
 
 
 void InteruptAlert(int gpio, int level, uint32_t tick)
 {
-	/*
 	
-	mcp23017_1_INT = level;			//interrupt from mcp23017 to indicate changes from previous value
-	int i, j;
-	
-	debounceTick = gpioTick() - prevTick;	//debounceTick should be very small if value just changed
-
-			State[Index] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-			++Index;
-
-			j=0xff;
-			
-
-
-
-			for (i=0; i<MAX_CHECKS; i++)
-			{ 
-				//State[i] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-				j = j & State[i];
-			}
-
-			Debounced_State = j;
-			if(Index>=MAX_CHECKS) Index=0;
-			
-			
-		if(!mcp23017_1_INT) 			//When interupt is active (low), read to clear the interupt
-		{
-					
-			//INTCAPB_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-			//INTCAPA_Current = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOA);
-
-
-			
-
-
-
-
-		}
-		
-		
-		if(mcp23017_1_INT) 			//When interupt not active (high), reading from mcp23017 is done.
-		{
-
-
-			
-			//printf("tempcount %d \n", tempcount++);
-			//printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
-			//printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
-		}
-		
-		if(level == 2)
-		{
-			if (1)
-			{
-				if ((INTCAPB_Previous != Debounced_State) || (INTCAPA_Previous != INTCAPA_Current))		//populate value only if it is different from previous
-				{	
-					printf("tempcount %d \n", tempcount++);
-					//printf("Current Tick: %d \n", gpioTick()); 
-					//printf("debounce tick %d microseconds \n", debounceTick);
-					//printf("MCP23x17_GPIOB: 0x%02x \n", INTCAPB_Current); //read gpio register to get value and to clear interupt
-					//printf("MCP23x17_GPIOA: 0x%02x \n\n", INTCAPA_Current); //read gpio register to get value and to clear interupt
-					printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
-				}
-			}
-			
-		}
-
-		INTCAPB_Previous = Debounced_State;
-	
-		prevTick = gpioTick();				//whenever the value just changed. restart timer
-		*/
 		
 	State[Index] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
 	++Index;
@@ -238,16 +170,25 @@ void InteruptAlert(int gpio, int level, uint32_t tick)
 		j = j & State[i];
 	}
 
-	Debounced_State = j;
+	Debounced_StateB = j;
 	if(Index>=MAX_CHECKS) Index=0;
 	debounceTick = gpioTick() - prevTick;	//debounceTick should be very small if value just changed
 	
-	if((INTCAPB_Previous != Debounced_State)) 			//only read mcp23017 if there are changes from previous value interupt
+	if((INTCAPB_Previous != Debounced_StateB)) 			//only read mcp23017 if there are changes from previous value interupt
 	{
-		printf("Debounce Tick: %d \n", debounceTick); 
+		//printf("Debounce Tick: %d \n", debounceTick); 
 		printf("tempcount %d \n", tempcount++);
-		printf("MCP23x17_GPIOB: 0x%02x \n\n", Debounced_State); //read gpio register to get value and to clear interupt
-		INTCAPB_Previous = Debounced_State;
+		//printf("MCP23x17_GPIOB: 0x%02x \n\n", Debounced_StateB); //read gpio register to get value and to clear interupt
+		INTCAPB_Previous = Debounced_StateB;
+		
+		if(!(mask_in[0] & Debounced_StateB))			//note on
+		{
+			printf("c on \n");
+		}
+		else if (mask_in[0] & Debounced_StateB)		//note off
+		{
+			printf("c off\n");
+		}
 	}
 	if(!mcp23017_1_INT) {
 		prevTick = gpioTick();				//whenever the value just changed. restart timer
@@ -258,27 +199,6 @@ void InteruptAlert(int gpio, int level, uint32_t tick)
 
 void UpdateI2C_Polling(void)
 {
-	State[Index] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-	++Index;
-	int i, j;
-
-	j=0xff;
-
-	for (i=0; i<MAX_CHECKS; i++)
-	{ 
-		//State[i] = wiringPiI2CReadReg8 (fd, MCP23x17_GPIOB);
-		j = j & State[i];
-	}
-
-	Debounced_State = j;
-	if(Index>=MAX_CHECKS) Index=0;
-
-	if((INTCAPB_Previous != Debounced_State)) 			//only read mcp23017 if there are changes from previous value interupt
-	{
-		printf("tempcount %d \n", tempcount++);
-		printf("MCP23x17_GPIOB: 0x%02x \n", Debounced_State); //read gpio register to get value and to clear interupt
-		INTCAPB_Previous = Debounced_State;
-	}
 	
 
 }
@@ -289,7 +209,7 @@ int main()
 	printf("Starting main routine \n");
 	
 	
-midi_channel=0;					//set initial midi channel to be 0
+	midi_channel=0;					//set initial midi channel to be 0
        
     snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0);
     snd_seq_set_client_name(seq, "GPIO MIDI Client");
@@ -319,7 +239,7 @@ midi_channel=0;					//set initial midi channel to be 0
 	//specifying gpio to use for input switch; specifying polarity
     gpionote[0].gpio=4; 	gpionote[0].polarity = 0;
 	gpionote[1].gpio=17; 	gpionote[1].polarity = 1; 
-	gpionote[2].gpio=27;
+	gpionote[2].gpio=27;	//I got bored here and don't want to program note polarity
 	gpionote[3].gpio=22;
 	gpionote[4].gpio=5;
 	gpionote[5].gpio=6;
@@ -411,7 +331,11 @@ midi_channel=0;					//set initial midi channel to be 0
 	wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPA ); 			// clear interrupt flag	
 	wiringPiI2CReadReg8 (fd, MCP23x17_INTCAPB ); 			// clear interrupt flag
 
-	
+	//setup masking array to obtain individual inputs from mcp23017
+	for (i=0; i<8; i++){
+		mask_in[i] = 1<<i;
+		//printf("mask_in[%d]=0x%02x\n",i,mask_in[i]);	
+	}
 	
 	//setup gpio 21 for MCP23017 for extra inputs
 	//This works fine for reed switches but mechanical switch still bounce a lot.
