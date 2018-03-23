@@ -42,9 +42,11 @@ autoconf
 				
 make
 
+./configure --enable-midi" enables the "btmidi-server" by "make". 
+
 sudo make install
 
-./configure --enable-midi" enables the "btmidi-server" by "make". 
+run program by navigating to tools folder and run "sudo ./btmidi-server"
 
 ******************************************************
  "alsa-seq-autoconnect" configuration
