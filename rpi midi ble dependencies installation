@@ -26,9 +26,26 @@ make
 sudo make install
 sudo pigpiod
 
+*********************************************
+BlueZ midi Configuration
+*********************************************
+
+download bluez-midi from web below
+https://github.com/oxesoft/bluez
+
 autoreconf -i
 
 autoconf
 
 ./configure --prefix=/usr --mandir=/usr/share/man \
 				--sysconfdir=/etc --localstatedir=/var
+				
+make
+
+./configure --enable-midi" enables the "btmidi-server" by "make". 
+
+******************************************************
+ "alsa-seq-autoconnect" configuration
+******************************************************
+
+To compile the "alsa-seq-autoconnect", change dir to ("cd rpi-midi-ble/alsa-seq-autoconnect/") and then "make"
