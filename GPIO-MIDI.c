@@ -4,7 +4,7 @@
 	* dedicated gpio (4, 17, 27, 22, 5, 6, 13, 19, 26,
 	* 				 	18, 23, 24, 25) - note gpio
 	* 						(, 12, 16)	octave up, down
-	* 						gpio 20 - spare
+	* 						gpio 20 - chord mode switch plays multiple notes
 	* 						gpio 21 - interupt from MCP23017 I2C IO extension IC
 
 
@@ -94,6 +94,14 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 		{
 			snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum, gpionote[i].notevelocity);
 			printf(" notenum on: %d \n\n", gpionote[i].notenum);
+			
+			//If chord mode switch is on then play the octave + the 5th note
+			if (gpioRead(20) & level)									//chord mode switch is on
+			{
+				snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum+12, gpionote[i].notevelocity);
+				snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
+			}
+			
 			snd_seq_event_output(seq, &ev);
 			snd_seq_drain_output(seq);
 			
@@ -103,6 +111,13 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 		{
 			snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum, 64);
 			printf(" notenum off: %d \n\n", gpionote[i].notenum);
+			
+			if (gpioRead(20) & !level)									//chord mode switch is off
+			{
+				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+12, gpionote[i].notevelocity);
+				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
+			}
+			
 			snd_seq_event_output(seq, &ev);
 			snd_seq_drain_output(seq);
 			
