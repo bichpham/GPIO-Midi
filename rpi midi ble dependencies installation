@@ -2,7 +2,7 @@ sudo apt-get install libasound2-dev (came with stretch)
 
 sudo apt-get install libglib2.0-dev
 
-sudo apt-get install udev
+sudo apt-get install udev (came with stretch)
 
 sudo apt-get install libreadline-dev
 
