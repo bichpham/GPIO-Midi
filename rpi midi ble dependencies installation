@@ -1,4 +1,4 @@
-sudo apt-get install libasound2-dev
+sudo apt-get install libasound2-dev (came with stretch)
 
 sudo apt-get install libglib2.0-dev
 
