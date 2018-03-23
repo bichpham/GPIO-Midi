@@ -48,4 +48,7 @@ make
  "alsa-seq-autoconnect" configuration
 ******************************************************
 
+download project from
+https://github.com/oxesoft/rpi-midi-ble
+
 To compile the "alsa-seq-autoconnect", change dir to ("cd rpi-midi-ble/alsa-seq-autoconnect/") and then "make"
