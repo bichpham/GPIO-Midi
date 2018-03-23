@@ -42,6 +42,8 @@ autoconf
 				
 make
 
+sudo make install
+
 ./configure --enable-midi" enables the "btmidi-server" by "make". 
 
 ******************************************************
