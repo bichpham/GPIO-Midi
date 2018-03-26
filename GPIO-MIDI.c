@@ -82,6 +82,8 @@ int INTCAPA_Current = 0;
 
 int mask_in[8];		//input mask ( ex: mask_in[0] for pin 0). This is to mask input from mcp23017
 
+bool chord_mode_memory = 0; 	//variable to keep track of chord_mode to prevent stuck notes
+
 
 void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 {
@@ -105,6 +107,7 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 				snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
 				snd_seq_event_output(seq, &ev);
 				printf(" chord mode midi command on \n");
+				chord_mode_memory = 1; 				// chord mode turn off only if the corresponding note was turned off
 			}
 			
 			snd_seq_drain_output(seq);
@@ -118,13 +121,14 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 			
 			snd_seq_event_output(seq, &ev);
 			
-			if (gpioRead(20))									//chord mode switch is off
+			if (gpioRead(20) || chord_mode_memory)									//chord mode switch is off
 			{
 				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+12, gpionote[i].notevelocity);
 				snd_seq_event_output(seq, &ev);
 				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
 				snd_seq_event_output(seq, &ev);
 				printf(" chord mode midi command off \n");
+				chord_mode_memory = 0; // turning chord mode off when corresponding note is off
 			}
 			
 			
