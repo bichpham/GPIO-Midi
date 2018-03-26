@@ -95,14 +95,18 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 			snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum, gpionote[i].notevelocity);
 			printf(" notenum on: %d \n\n", gpionote[i].notenum);
 			
+			snd_seq_event_output(seq, &ev);
+			
 			//If chord mode switch is on then play the octave + the 5th note
-			if (gpioRead(20) & level)									//chord mode switch is on
+			if (gpioRead(20))									//chord mode switch is on
 			{
 				snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum+12, gpionote[i].notevelocity);
+				snd_seq_event_output(seq, &ev);
 				snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
+				snd_seq_event_output(seq, &ev);
+				printf(" chord mode midi command on \n");
 			}
 			
-			snd_seq_event_output(seq, &ev);
 			snd_seq_drain_output(seq);
 			
 		}
@@ -112,13 +116,18 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 			snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum, 64);
 			printf(" notenum off: %d \n\n", gpionote[i].notenum);
 			
-			if (gpioRead(20) & !level)									//chord mode switch is off
+			snd_seq_event_output(seq, &ev);
+			
+			if (gpioRead(20))									//chord mode switch is off
 			{
 				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+12, gpionote[i].notevelocity);
+				snd_seq_event_output(seq, &ev);
 				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
+				snd_seq_event_output(seq, &ev);
+				printf(" chord mode midi command off \n");
 			}
 			
-			snd_seq_event_output(seq, &ev);
+			
 			snd_seq_drain_output(seq);
 			
 		}
@@ -298,6 +307,10 @@ int main()
 	gpioGlitchFilter(16,20000); //set debounce for gpioSetAlertFunc
 	gpioSetAlertFunc(12, UpdateOctave);			// octave up button
 	gpioSetAlertFunc(16, UpdateOctave);			// octave down button
+	
+	//setup gpio 20 for chord mode
+	gpioSetMode(20, PI_INPUT);	//Set as input.
+	gpioSetPullUpDown(20, PI_PUD_DOWN);// Set as pull-down. 
 
 	// set up MCP23017
 	
