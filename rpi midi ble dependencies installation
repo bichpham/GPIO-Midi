@@ -2,13 +2,13 @@ sudo apt-get install libasound2-dev (came with stretch) not with the lite versio
 
 sudo apt-get install libglib2.0-dev -y
 
-sudo apt-get install udev (came with stretch)
+sudo apt-get install udev (came with stretch and the latest lite)
 
-sudo apt-get install libreadline-dev
+sudo apt-get install libreadline-dev -y
 
 sudo apt-get install libtool -y
  
-sudo apt-get install intltool
+sudo apt-get install intltool -y
  
 sudo apt-get install libdbus-1-dev
 
