@@ -25,6 +25,7 @@ cd PIGPIO
 make
 sudo make install
 sudo pigpiod
+sudo reboot now
 
 *********************************************
 BlueZ midi Configuration
