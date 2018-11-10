@@ -1,6 +1,6 @@
-sudo apt-get install libasound2-dev (came with stretch)
+sudo apt-get install libasound2-dev (came with stretch) not with the lite version
 
-sudo apt-get install libglib2.0-dev
+sudo apt-get install libglib2.0-dev -y
 
 sudo apt-get install udev (came with stretch)
 
