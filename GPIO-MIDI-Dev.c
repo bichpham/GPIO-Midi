@@ -8,6 +8,8 @@
 	* 						gpio 20 - chord mode switch plays multiple notes
 	* 						gpio 21 - interupt from MCP23017 I2C IO extension IC
 
+	* Program channel conversion
+	*	c channel 0 = iSymphonic channel 1
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -96,7 +98,7 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 	{
 		if ((gpio == gpionote[i].gpio) & level)						//button pressed
 		{
-			snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum, gpionote[i].notevelocity);
+			snd_seq_ev_set_noteon(&ev, gpionote[i].notechannel , gpionote[i].notenum, gpionote[i].notevelocity);
 			printf(" notenum on: %d \n\n", gpionote[i].notenum);
 			
 			snd_seq_event_output(seq, &ev);
@@ -104,9 +106,9 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 			//If chord mode switch is on then play the octave + the 5th note
 			if (gpioRead(20))									//chord mode switch is on
 			{
-				snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum+12, gpionote[i].notevelocity);
+				snd_seq_ev_set_noteon(&ev, gpionote[i].notechannel, gpionote[i].notenum+12, gpionote[i].notevelocity);
 				snd_seq_event_output(seq, &ev);
-				snd_seq_ev_set_noteon(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
+				snd_seq_ev_set_noteon(&ev, gpionote[i].notechannel, gpionote[i].notenum+19, gpionote[i].notevelocity);
 				snd_seq_event_output(seq, &ev);
 				printf(" chord mode midi command on \n");
 				chord_mode_memory = 1; 				// chord mode turn off only if the corresponding note was turned off
@@ -118,16 +120,16 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 		
 		if ((gpio == gpionote[i].gpio) & !level)					//button released
 		{
-			snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum, 64);
+			snd_seq_ev_set_noteoff(&ev, gpionote[i].notechannel, gpionote[i].notenum, 64);
 			printf(" notenum off: %d \n\n", gpionote[i].notenum);
 			
 			snd_seq_event_output(seq, &ev);
 			
 			if (gpioRead(20) || chord_mode_memory)									//chord mode switch is off
 			{
-				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+12, gpionote[i].notevelocity);
+				snd_seq_ev_set_noteoff(&ev, gpionote[i].notechannel, gpionote[i].notenum+12, gpionote[i].notevelocity);
 				snd_seq_event_output(seq, &ev);
-				snd_seq_ev_set_noteoff(&ev, midi_channel, gpionote[i].notenum+19, gpionote[i].notevelocity);
+				snd_seq_ev_set_noteoff(&ev, gpionote[i].notechannel, gpionote[i].notenum+19, gpionote[i].notevelocity);
 				snd_seq_event_output(seq, &ev);
 				printf(" chord mode midi command off \n");
 				chord_mode_memory = 0; // turning chord mode off when corresponding note is off
@@ -153,7 +155,7 @@ void UpdateOctave(int gpio, int level, uint32_t tick)
    
    {
 	   notenum_start = notenum_start+12;
-	   for(i=0; i<13; i++)
+	   for(i=0; i<12; i++)
 		{
 			gpionote[i].notenum = notenum_start+i;
 
@@ -165,7 +167,7 @@ void UpdateOctave(int gpio, int level, uint32_t tick)
    {
 	   
 	   notenum_start = notenum_start-12;
-	   for(i=0; i<13; i++)
+	   for(i=0; i<12; i++)
 		{
 			gpionote[i].notenum = notenum_start+i;
 
@@ -289,7 +291,7 @@ int main()
 	
 	//setting up gpio and populating default midi note number,gpio, and velocity
    int i;
-   for(i=0; i<13; i++)
+   for(i=0; i<12; i++)
 	{
 		gpionote[i].notenum = notenum_start+i;
 		gpionote[i].notevelocity = 80;			//max is 127
@@ -302,6 +304,15 @@ int main()
          //printf(" notenum is: %d \n", gpionote[i].notenum);
          //printf(" notevelocity is: %d\n\n",gpionote[i].notevelocity);
 	}
+	
+	//Setting up note 13th for cymbal crash
+	
+	gpionote[12].notenum = 40;			//E for cymbal crash in iSymphonic "Symphonic Percussion" sound set
+	gpionote[12].notevelocity = 120;			//max is 127
+	gpioSetMode(gpionote[12].gpio, PI_INPUT);	//Set as input.
+	gpioSetPullUpDown(gpionote[12].gpio, PI_PUD_DOWN);// Set as pull-down. 
+	gpioGlitchFilter(gpionote[12].gpio,4000); //set 4ms debounce for gpioSetAlertFunc
+	gpioSetAlertFunc(gpionote[12].gpio, ProcessMIDIEvent);	
 	
 
 	//setup octave up octave down button
