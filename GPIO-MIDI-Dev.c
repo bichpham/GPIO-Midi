@@ -7,6 +7,7 @@
 	* 						(, 12, 16)	octave up, down
 	* 						gpio 20 - chord mode switch plays multiple notes
 	* 						gpio 21 - interupt from MCP23017 I2C IO extension IC
+	*						gpio 7, 8, 9, 10, 11 - not assigned (spi0 inputs)
 
 	* Program channel conversion
 	*	c channel 0 = iSymphonic channel 1
@@ -44,7 +45,7 @@ snd_seq_t *seq;		// variable seq is a pointer to sdn-seq_t type
 
 snd_seq_event_t ev;
 
-int midi_channel;
+int main_midi_channel;
 
 struct midinote 
 {
@@ -241,7 +242,7 @@ int main()
 	printf("Starting main routine \n");
 	
 	
-	midi_channel=0;					//set initial midi channel to be 0
+	main_midi_channel=4;					//set initial midi channel to be 5 (isymphonic)
        
     snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0);
     snd_seq_set_client_name(seq, "GPIO MIDI Client");
@@ -269,22 +270,22 @@ int main()
       return 1;
    }
 	//specifying gpio to use for input switch; specifying polarity
-    gpionote[0].gpio=4; 	gpionote[0].polarity = 0;		gpionote[0].notechannel = 0;
-	gpionote[1].gpio=17; 	gpionote[1].polarity = 0; 		gpionote[1].notechannel = 0;
-	gpionote[2].gpio=27;	gpionote[2].polarity = 0;		gpionote[2].notechannel = 0;
-	gpionote[3].gpio=22;	gpionote[3].polarity = 0;		gpionote[3].notechannel = 0;
-	gpionote[4].gpio=5;		gpionote[4].polarity = 0;		gpionote[4].notechannel = 0;
-	gpionote[5].gpio=6;		gpionote[5].polarity = 0;		gpionote[5].notechannel = 0;
-	gpionote[6].gpio=13;	gpionote[6].polarity = 0;		gpionote[6].notechannel = 0;
-	gpionote[7].gpio=19;	gpionote[7].polarity = 0;		gpionote[7].notechannel = 0;
-	gpionote[8].gpio=26;	gpionote[8].polarity = 0;		gpionote[8].notechannel = 0;
-	gpionote[9].gpio=18;	gpionote[9].polarity = 0;		gpionote[9].notechannel = 0;
-	gpionote[10].gpio=23;	gpionote[10].polarity = 0;		gpionote[10].notechannel = 0;
-	gpionote[11].gpio=24;	gpionote[11].polarity = 0;		gpionote[11].notechannel = 0;
-	gpionote[12].gpio=25;	gpionote[12].polarity = 0;		gpionote[12].notechannel = 10;				//cymbal channel 10 f#
+    gpionote[0].gpio=4; 	gpionote[0].polarity = 0;		gpionote[0].notechannel = main_midi_channel;
+	gpionote[1].gpio=17; 	gpionote[1].polarity = 0; 		gpionote[1].notechannel = main_midi_channel;
+	gpionote[2].gpio=27;	gpionote[2].polarity = 0;		gpionote[2].notechannel = main_midi_channel;
+	gpionote[3].gpio=22;	gpionote[3].polarity = 0;		gpionote[3].notechannel = main_midi_channel;
+	gpionote[4].gpio=5;		gpionote[4].polarity = 0;		gpionote[4].notechannel = main_midi_channel;
+	gpionote[5].gpio=6;		gpionote[5].polarity = 0;		gpionote[5].notechannel = main_midi_channel;
+	gpionote[6].gpio=13;	gpionote[6].polarity = 0;		gpionote[6].notechannel = main_midi_channel;
+	gpionote[7].gpio=19;	gpionote[7].polarity = 0;		gpionote[7].notechannel = main_midi_channel;
+	gpionote[8].gpio=26;	gpionote[8].polarity = 0;		gpionote[8].notechannel = main_midi_channel;
+	gpionote[9].gpio=18;	gpionote[9].polarity = 0;		gpionote[9].notechannel = main_midi_channel;
+	gpionote[10].gpio=23;	gpionote[10].polarity = 0;		gpionote[10].notechannel = main_midi_channel;
+	gpionote[11].gpio=24;	gpionote[11].polarity = 0;		gpionote[11].notechannel = main_midi_channel;
+	gpionote[12].gpio=25;	gpionote[12].polarity = 0;		gpionote[12].notechannel = 9;				//cymbal channel 10 note E in symphonic percussion
 	//gpionote[13].gpio=12;		//reserving these for octave up
 	//gpionote[14].gpio=16;		//reserving this for octave down
-	//gpionote[15].gpio=20;		//spare
+	//gpionote[15].gpio=20;		//chord mode plays octave + 5
 	//gpionote[16].gpio=21;		//interupt from mcp23017 for changes in inputs from previous value
 	
 	//AllocateNotes();
