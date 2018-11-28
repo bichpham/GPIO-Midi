@@ -1,4 +1,4 @@
-/*
+/* testing
 
 	* compile: gcc -o GPIO-MIDI GPIO-MIDI.c -lasound -lpigpio -lrt -lwiringPi
 	* dedicated gpio (4, 17, 27, 22, 5, 6, 13, 19, 26,
