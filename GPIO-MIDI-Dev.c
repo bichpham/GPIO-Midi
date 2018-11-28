@@ -4,13 +4,20 @@
 	* dedicated gpio (4, 17, 27, 22, 5, 6, 13, 19, 26,
 	* 				 	18, 23, 24) - note gpio
 	*								25 - cymbal channel 10
+	*								7 - channel 11 - timpany roll
+	*								8 - update velocity true = max velocity, false = med velocity
 	* 						(, 12, 16)	octave up, down
 	* 						gpio 20 - chord mode switch plays multiple notes
 	* 						gpio 21 - interupt from MCP23017 I2C IO extension IC
-	*						gpio 7, 8, 9, 10, 11 - not assigned (spi0 inputs)
+	*						gpio 9, 10, 11 - not assigned (spi0 inputs)
+	*						
 
 	* Program channel conversion
-	*	c channel 0 = iSymphonic channel 1
+	*	c code channel 0 = iSymphonic channel 1
+	*to do
+	*	1. add switch to maximize volume normal/max
+	*	2. add add button to play timpany roll (done) (wire gpio 7 up)
+	*	3. add button to play secondary channel
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -177,6 +184,27 @@ void UpdateOctave(int gpio, int level, uint32_t tick)
 	}
 }
 
+void UpdateVelocity(int gpio, int level, uint32_t tick)					//gpio 8 true (max velocity), gpio 8 false (medium velocity)
+{
+	
+   //repopulate velocity 
+   int i;
+   if (gpio==8 && level)			//Max velocity
+   
+	   for(i=0; i<12; i++)
+		{
+			gpionote[i].notevelocity = 126;
+
+		}
+   if (gpio==8 && !level)			//Medium velocity
+   
+	   for(i=0; i<12; i++)
+		{
+			gpionote[i].notevelocity = 80;
+
+		}
+}
+
 int tempcount =0;
 uint32_t prevTick;
 int debounceTick;
@@ -283,6 +311,7 @@ int main()
 	gpionote[10].gpio=23;	gpionote[10].polarity = 0;		gpionote[10].notechannel = main_midi_channel;
 	gpionote[11].gpio=24;	gpionote[11].polarity = 0;		gpionote[11].notechannel = main_midi_channel;
 	gpionote[12].gpio=25;	gpionote[12].polarity = 0;		gpionote[12].notechannel = 9;				//cymbal channel 10 note E in symphonic percussion
+	gpionote[13].gpio=7;	gpionote[12].polarity = 0;		gpionote[12].notechannel = 10;				//cymbal channel 11 note E in symphonic percussion
 	//gpionote[13].gpio=12;		//reserving these for octave up
 	//gpionote[14].gpio=16;		//reserving this for octave down
 	//gpionote[15].gpio=20;		//chord mode plays octave + 5
@@ -315,6 +344,15 @@ int main()
 	gpioGlitchFilter(gpionote[12].gpio,4000); //set 4ms debounce for gpioSetAlertFunc
 	gpioSetAlertFunc(gpionote[12].gpio, ProcessMIDIEvent);	
 	
+	//Setting up note 14th note for timpany roll
+	
+	gpionote[13].notenum = 40;			//E for cymbal crash in iSymphonic "Timpany Roll" sound set
+	gpionote[13].notevelocity = 120;			//max is 127
+	gpioSetMode(gpionote[13].gpio, PI_INPUT);	//Set as input.
+	gpioSetPullUpDown(gpionote[13].gpio, PI_PUD_DOWN);// Set as pull-down. 
+	gpioGlitchFilter(gpionote[13].gpio,4000); //set 4ms debounce for gpioSetAlertFunc
+	gpioSetAlertFunc(gpionote[13].gpio, ProcessMIDIEvent);
+	
 
 	//setup octave up octave down button
 	gpioSetMode(12, PI_INPUT);	//Set as input.
@@ -325,6 +363,12 @@ int main()
 	gpioGlitchFilter(16,20000); //set debounce for gpioSetAlertFunc
 	gpioSetAlertFunc(12, UpdateOctave);			// octave up button
 	gpioSetAlertFunc(16, UpdateOctave);			// octave down button
+	
+	//setup update velocity
+	gpioSetMode(8, PI_INPUT);	//Set as input. 
+	gpioSetPullUpDown(8, PI_PUD_DOWN);// Set as pull-down. 
+	gpioGlitchFilter(8,5000); //set debounce for gpioSetAlertFunc
+	gpioSetAlertFunc(8, UpdateVelocity);			// octave down button
 	
 	//setup gpio 20 for chord mode
 	gpioSetMode(20, PI_INPUT);	//Set as input.
