@@ -102,7 +102,7 @@ void ProcessMIDIEvent(int gpio, int level, uint32_t tick)
 	 printf("GPIO %d became %d at %d \n", gpio, level, tick);
 
 	int i; 
-	for(i=0; i<13; i++)
+	for(i=0; i<14; i++)
 	{
 		if ((gpio == gpionote[i].gpio) & level)						//button pressed
 		{
@@ -311,7 +311,7 @@ int main()
 	gpionote[10].gpio=23;	gpionote[10].polarity = 0;		gpionote[10].notechannel = main_midi_channel;
 	gpionote[11].gpio=24;	gpionote[11].polarity = 0;		gpionote[11].notechannel = main_midi_channel;
 	gpionote[12].gpio=25;	gpionote[12].polarity = 0;		gpionote[12].notechannel = 9;				//cymbal channel 10 note E in symphonic percussion
-	gpionote[13].gpio=7;	gpionote[12].polarity = 0;		gpionote[12].notechannel = 10;				//cymbal channel 11 note E in symphonic percussion
+	gpionote[13].gpio=7;	gpionote[13].polarity = 0;		gpionote[13].notechannel = 10;				//timpany roll channel 11 note E in symphonic percussion
 	//gpionote[13].gpio=12;		//reserving these for octave up
 	//gpionote[14].gpio=16;		//reserving this for octave down
 	//gpionote[15].gpio=20;		//chord mode plays octave + 5
