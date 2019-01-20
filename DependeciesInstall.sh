@@ -71,5 +71,61 @@ else
 	exit 1
 fi
 
+rm pigpio.zip
+sudo rm -rf PIGPIO
+
+wget abyz.me.uk/rpi/pigpio/pigpio.zip
+
+if [ $? -eq 0 ]; then 
+	echo "download pigpio success"
+else
+	echo "download pigpio failed"
+	exit 1
+fi
+
+unzip pigpio.zip
+if [ $? -eq 0 ]; then 
+	echo "unzip pigpio success"
+else
+	echo "unzip pigpio failed"
+	exit 1
+fi
+
+cd PIGPIO
+if [ $? -eq 0 ]; then 
+	echo "cd pigpio success"
+else
+	echo "cd pigpio failed"
+	exit 1
+fi
+
+make
+if [ $? -eq 0 ]; then 
+	echo "make pigpio success"
+else
+	echo "make pigpio failed"
+	exit 1
+fi
+
+sudo make install
+
+if [ $? -eq 0 ]; then 
+	echo "make install pigpio success"
+else
+	echo "make install pigpio failed"
+	exit 1
+fi
+
+sudo pigpiod
+
+if [ $? -eq 0 ]; then 
+	echo "pigpiod success"
+else
+	echo "pigpiod failed"
+	exit 1
+fi
+
+wget https://github.com/oxesoft/bluez.zip
+
 
 echo 'Completed Dependencies Installation'
