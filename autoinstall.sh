@@ -1,5 +1,9 @@
 #!/bin/sh
 echo "Begin script"
+
+echo "Teresa Testing"
+
+
 sudo apt-get install libasound2-dev
 if [ $? -eq 0 ]; then 
 	echo "libasound2-dev success"
@@ -78,6 +82,20 @@ else
 	echo "libical-dev failed"
 	exit 1
 fi
+
+echo "done with dependencies installation"
+
+echo "begin setting up pi"
+
+sudo apt-get install git
+
+if [ $? -eq 0 ]; then 
+	echo "instal git success"
+else
+	echo "install git failed"
+	exit 1
+fi
+
 
 rm pigpio.zip
 sudo rm -rf PIGPIO
@@ -245,6 +263,8 @@ else
 	echo "make alsa-seq-autoconnect/ failed"
 	exit 1
 fi
+
+
 
 
 
